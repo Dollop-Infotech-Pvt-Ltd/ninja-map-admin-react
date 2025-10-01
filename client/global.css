@@ -1,0 +1,389 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 234 20% 99%;
+    --foreground: 234 25% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 234 25% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 234 25% 8%;
+
+    --primary: 234 89% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 234 15% 95%;
+    --secondary-foreground: 234 25% 8%;
+
+    --muted: 234 15% 95%;
+    --muted-foreground: 234 10% 45%;
+
+    --accent: 234 15% 95%;
+    --accent-foreground: 234 25% 8%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 234 12% 88%;
+    --input: 234 12% 90%;
+    --ring: 234 89% 58%;
+
+    --radius: 0.75rem;
+
+    /* Enhanced brand colors for stunning light theme */
+    --brand: 234 89% 74%;
+    --brand-foreground: 0 0% 100%;
+    --brand-50: 234 100% 99%;
+    --brand-100: 234 89% 96%;
+    --brand-200: 234 89% 92%;
+    --brand-300: 234 89% 85%;
+    --brand-400: 234 89% 80%;
+    --brand-500: 234 89% 76%;
+    --brand-600: 234 89% 74%;
+    --brand-700: 234 89% 68%;
+    --brand-800: 234 89% 60%;
+    --brand-900: 234 89% 52%;
+
+    /* Beautiful gradient colors for light theme */
+    --gradient-from: 234 89% 65%;
+    --gradient-to: 270 91% 55%;
+    --gradient-via: 250 90% 60%;
+
+    /* Light theme specific colors with enhanced contrast */
+    --light-overlay: 255 255 255 / 0.9;
+    --light-glass: 255 255 255 / 0.85;
+    --light-subtle: 234 50% 99%;
+    --light-border: 220 13% 87%;
+    --light-shadow: 220 43% 11% / 0.1;
+
+    /* Enhanced cursor interaction colors */
+    --cursor-glow: 234 89% 58% / 0.3;
+    --cursor-trail: 234 89% 70% / 0.2;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%;
+
+    --card: 224 71% 6%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 224 71% 6%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 234 89% 68%;
+    --primary-foreground: 224 71% 4%;
+
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 215 28% 17%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 215 28% 18%;
+    --input: 215 28% 18%;
+    --ring: 234 89% 68%;
+
+    --sidebar-background: 224 71% 4%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 234 89% 68%;
+    --sidebar-primary-foreground: 224 71% 4%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-ring: 234 89% 68%;
+
+    /* Dark theme brand colors maintaining consistency */
+    --brand: 234 89% 74%;
+    --brand-foreground: 224 71% 4%;
+    --brand-50: 234 89% 8%;
+    --brand-100: 234 89% 12%;
+    --brand-200: 234 89% 18%;
+    --brand-300: 234 89% 28%;
+    --brand-400: 234 89% 55%;
+    --brand-500: 234 89% 70%;
+    --brand-600: 234 89% 74%;
+    --brand-700: 234 89% 80%;
+    --brand-800: 234 89% 85%;
+    --brand-900: 234 89% 92%;
+
+    /* Dark theme specific colors with enhanced visibility */
+    --light-overlay: 224 71% 4% / 0.95;
+    --light-glass: 224 71% 4% / 0.8;
+    --light-border: 215 28% 20%;
+    --light-shadow: 0 0% 0% / 0.5;
+
+    /* Enhanced cursor interaction colors for dark theme */
+    --cursor-glow: 234 89% 68% / 0.4;
+    --cursor-trail: 234 89% 75% / 0.25;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Prevent horizontal scrollbar on larger screens for auth pages */
+  .auth-page {
+    overflow-x: hidden;
+  }
+
+  /* Enhanced depth and visual effects for right sections */
+  .enhanced-depth {
+    position: relative;
+  }
+
+  .enhanced-depth::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--brand-500) / 0.03) 0%,
+      transparent 30%,
+      transparent 70%,
+      hsl(var(--brand-600) / 0.05) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .enhanced-depth::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at 30% 20%,
+      hsl(var(--brand-400) / 0.08) 0%,
+      transparent 50%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Smooth hardware acceleration for animations */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+
+  /* Enhanced glass morphism effects */
+  .glass-morphism {
+    backdrop-filter: blur(24px) saturate(180%);
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background) / 0.8) 0%,
+      hsl(var(--card) / 0.6) 100%
+    );
+    border: 1px solid hsl(var(--border) / 0.3);
+  }
+
+  /* Responsive padding utility */
+  .responsive-padding {
+    padding: clamp(1rem, 4vw, 3rem);
+  }
+
+  .responsive-padding-x {
+    padding-left: clamp(1rem, 4vw, 3rem);
+    padding-right: clamp(1rem, 4vw, 3rem);
+  }
+
+  .responsive-padding-y {
+    padding-top: clamp(1rem, 4vw, 3rem);
+    padding-bottom: clamp(1rem, 4vw, 3rem);
+  }
+
+  /* Thin scrollbars for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Thin scrollbars for Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+  }
+}
+
+/* Enhanced animations for better performance and smoothness */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) translateZ(0); }
+  50% { transform: translateY(-4px) translateZ(0); }
+}
+
+@keyframes pulse-brand {
+  0%, 100% { transform: scale(1) translateZ(0); opacity: 1; }
+  50% { transform: scale(1.02) translateZ(0); opacity: 0.9; }
+}
+
+@keyframes rotate-slow {
+  from { transform: rotate(0deg) translateZ(0); }
+  to { transform: rotate(360deg) translateZ(0); }
+}
+
+@keyframes ping-brand {
+  75%, 100% {
+    transform: scale(1.8) translateZ(0);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(60px) translateZ(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-30px) translateZ(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    transform: translateY(10px) translateZ(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-float {
+  animation: float 1.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-pulse-brand {
+  animation: pulse-brand 1s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 12s linear infinite;
+  will-change: transform;
+}
+
+.animate-ping-brand {
+  animation: ping-brand 0.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Autofill styles fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px hsl(var(--card) / 0.6) inset !important;
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  backdrop-filter: blur(12px);
+}
+
+input:-webkit-autofill::first-line {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Enhanced focus states with single border appearance */
+.focus-brand:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--brand-500) / 0.3);
+}
+
+/* Input focus ring fix to prevent double border */
+input:focus,
+input:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 1px hsl(var(--brand-500)) !important;
+  border-color: hsl(var(--brand-500)) !important;
+}
+
+input:focus:not(:focus-visible) {
+  box-shadow: none !important;
+  border-color: hsl(var(--brand-500)) !important;
+}
+
+/* Loading shimmer effect */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.5s infinite;
+}
