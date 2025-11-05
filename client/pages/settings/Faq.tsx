@@ -50,8 +50,13 @@ export default function FAQ() {
   const fetchPage = async (page = pageNumber, size = pageSize, q = query) => {
     setLoading(true);
     try {
-      const params: Record<string, any> = { pageSize: size, pageNumber: page };
-      if (q && q.trim()) params.search = q.trim();
+      const params: Record<string, any> = {
+        pageSize: size,
+        pageNumber: page,
+        sortDirection: "DESC",
+        sortKey: "createdDate",
+      };
+      if (q && q.trim()) params.searchValue = q.trim();
       const res = await api.get<any>("/api/faqs/get-all", { query: params });
       const data = res?.data ?? res;
       const list = Array.isArray(data)

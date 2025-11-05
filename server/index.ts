@@ -3,6 +3,13 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleDeleteAdmin } from "./routes/admins";
+import {
+  handleGetAllPermissions,
+  handleDeletePermission,
+  handleUpdatePermission,
+  handleCreatePermission,
+  handleGetCurrentUserPermissions,
+} from "./routes/permissions";
 
 export function createServer() {
   const app = express();
@@ -22,6 +29,13 @@ export function createServer() {
 
   // Admin routes
   app.delete("/api/admins/delete", handleDeleteAdmin);
+
+  // Permissions routes
+  app.get("/api/permissions/get-all", handleGetAllPermissions);
+  app.get("/api/permissions/me", handleGetCurrentUserPermissions);
+  app.post("/api/permissions/create", handleCreatePermission);
+  app.put("/api/permissions/update", handleUpdatePermission);
+  app.delete("/api/permissions/delete", handleDeletePermission);
 
   return app;
 }

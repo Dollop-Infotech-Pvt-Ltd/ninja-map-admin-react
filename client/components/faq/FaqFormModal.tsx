@@ -92,30 +92,58 @@ export default function FaqFormModal({ open, onOpenChange, onCreated, onUpdated,
       return;
     }
     const form = new FormData();
-    form.append("id", String(id));
     form.append("category", category);
     questions.forEach((qa, i) => {
       form.append(`questions[${i}].question`, qa.question);
       form.append(`questions[${i}].answer`, qa.answer);
     });
-    if (file) form.append("categoryImageUrl", file);
+
+    // Ensure server receives categoryImageUrl on update
+    try {
+      if (file) {
+        form.append("categoryImageUrl", file);
+      } else if (existingImageUrl) {
+        const response = await fetch(existingImageUrl);
+        if (!response.ok) throw new Error(`Failed to fetch existing image (${response.status})`);
+        const blob = await response.blob();
+        const defaultName = (() => {
+          try { return new URL(existingImageUrl).pathname.split("/").pop() || "image"; } catch { return "image"; }
+        })();
+        const imageFile = new File([blob], defaultName, { type: blob.type || "application/octet-stream" });
+        form.append("categoryImageUrl", imageFile);
+      } else {
+        toast({ title: "Image required", description: "Please upload a category image.", variant: "destructive" });
+        return;
+      }
+    } catch (err: any) {
+      toast({ title: "Image attach failed", description: err?.message || "Could not attach existing image.", variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     try {
       let res: any | null = null;
       try {
+        // Primary: PUT /api/faqs/update?id={id}
         res = await api.put<any>(`/api/faqs/update`, { body: form, query: { id } });
       } catch {
-        try { res = await api.put<any>(`/api/faqs/update`, { body: form }); }
-        catch { try { res = await api.put<any>(`/api/faqs/${id}`, { body: form }); }
-        catch { try { res = await api.post<any>(`/api/faqs/update/${id}`, { body: form }); }
-        catch { res = await api.post<any>(`/api/faqs/update`, { body: form }); }}}
+        // Fallback: PUT /api/faqs/update/{id}
+        res = await api.put<any>(`/api/faqs/update?id=${id}`, { body: form });
       }
       toast({ title: "FAQ updated", description: `${category} has been updated.` });
       onUpdated?.(res as any);
       onOpenChange(false);
     } catch (e: any) {
-      toast({ title: "Update failed", description: e?.message || "Unable to update FAQ", variant: "destructive" });
+      const status = e?.status || e?.response?.status;
+      const data = e?.data || e?.response?.data;
+      const serverMsg =
+        (typeof data === "string" && data) ||
+        data?.message ||
+        data?.error ||
+        (Array.isArray(data?.errors) && data.errors.map((x: any) => x?.message || x).join("; ")) ||
+        (data && typeof data === "object" ? JSON.stringify(data) : null);
+      const desc = serverMsg || e?.message || "Unable to update FAQ";
+      toast({ title: `Update failed${status ? ` (${status})` : ""}`, description: String(desc), variant: "destructive" });
     } finally {
       setLoading(false);
     }

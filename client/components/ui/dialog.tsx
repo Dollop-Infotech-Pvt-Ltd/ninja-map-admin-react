@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { scheduleRestoreDocumentInteractivity } from "@/lib/interactivity";
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
@@ -18,6 +19,8 @@ const Dialog = (props: React.ComponentProps<typeof DialogPrimitive.Root>) => {
       try {
         lastActive.current = document.activeElement as HTMLElement | null
       } catch {}
+      // In case previous dialogs left the page inert, proactively restore interactivity
+      try { scheduleRestoreDocumentInteractivity(0) } catch {}
     } else {
       // restore focus to previously focused element after animations
       setTimeout(() => {
@@ -31,8 +34,8 @@ const Dialog = (props: React.ComponentProps<typeof DialogPrimitive.Root>) => {
           Array.from(document.querySelectorAll('[data-state="closed"]')).forEach((el) => {
             try {
               if (el instanceof HTMLElement && (el.classList.contains('fixed') || el.classList.contains('z-50'))) {
-                el.style.pointerEvents = 'none'
-                el.style.display = 'none'
+                // el.style.pointerEvents = 'none'
+                // el.style.display = 'none'
               }
             } catch {}
           })
@@ -68,6 +71,9 @@ const Dialog = (props: React.ComponentProps<typeof DialogPrimitive.Root>) => {
             } catch {}
           })
         } catch {}
+
+        // Finally, schedule a restore to catch anything set by async transitions
+        try { scheduleRestoreDocumentInteractivity(0) } catch {}
       }, 250)
     }
 

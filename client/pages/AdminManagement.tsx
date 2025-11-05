@@ -127,16 +127,32 @@ export default function AdminManagement() {
         query: { pageSize, pageNumber },
       })
       const items = (data as any)?.content || (data as any)?.data || []
-      const mapped = (items || []).map((u: any) => ({
-        id: u.id,
-        name: u.fullName || u.full_name || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
-        email: u.email,
-        phone: u.mobileNumber || u.mobile_number || u.phone,
-        role: u.roleName || u.role_name || u.role || (Array.isArray(u.roles) && (u.roles[0]?.roleName || u.roles[0]?.name)) || '—',
-        avatar: u.avatar || undefined,
-        status: u.status || 'active',
-        lastLogin: u.lastLogin || u.last_login || '—',
-      })) as Admin[]
+      const mapped = (items || []).map((u: any) => {
+        const name =
+          u.fullName ||
+          u.full_name ||
+          `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+          u.name ||
+          '—'
+
+        const avatar =
+          u.profilePicture ||
+          u.profile_picture ||
+          u.avatar ||
+          (Array.isArray(u.photos) ? u.photos.find((photo) => typeof photo === 'string' && photo.trim().length > 0) : undefined) ||
+          undefined
+
+        return {
+          id: u.id,
+          name,
+          email: u.email,
+          phone: u.mobileNumber || u.mobile_number || u.phone,
+          role: u.roleName || u.role_name || u.role || (Array.isArray(u.roles) && (u.roles[0]?.roleName || u.roles[0]?.name)) || '—',
+          avatar,
+          status: u.status || 'active',
+          lastLogin: u.lastLogin || u.last_login || '—',
+        }
+      }) as Admin[]
       setAdmins(mapped)
       setTotalElements((data as any)?.totalElements ?? (data as any)?.totalElements ?? mapped.length)
       setTotalPages((data as any)?.totalPages ?? 1)
@@ -430,9 +446,9 @@ export default function AdminManagement() {
       <div className="space-y-6">
         <div className="flex flex-col items-center space-y-4">
           <Avatar className="w-24 h-24">
-            <AvatarImage src={avatarPreview || admin.avatar} />
+            <AvatarImage src={avatarPreview || admin.avatar || undefined} />
             <AvatarFallback className="bg-brand-100 text-brand-700 text-lg">
-              {admin.name ? admin.name.split(' ').map(n => n[0]).join('') : 'A'}
+              {((admin.name || 'Admin').split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2)) || 'A'}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -585,7 +601,7 @@ export default function AdminManagement() {
             <h2 className="text-xl lg:text-2xl font-bold text-foreground">Admins</h2>
             <p className="text-sm text-muted-foreground">Manage admin accounts and permissions</p>
           </div>
-          <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700" onClick={() => setShowCreateDialog(true)}>
+          <Button size="sm" className="h-8 bg-brand hover:bg-brand-700" onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add Admin
             </Button>
@@ -647,60 +663,71 @@ export default function AdminManagement() {
                   </TableRow>
                 ) : (
                   <AnimatePresence>
-                    {filteredAdmins.map((admin) => (
-                      <motion.tr key={admin.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }} className="group">
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarImage src={admin.avatar} />
-                              <AvatarFallback className="bg-brand-100 text-brand-700">{admin.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-foreground">{admin.name}</p>
+                    {filteredAdmins.map((admin) => {
+                      const safeName = (admin.name || '').trim() || 'Admin'
+                      const initials =
+                        safeName
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2) || 'A'
+
+                      return (
+                        <motion.tr key={admin.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }} className="group">
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                <AvatarImage src={admin.avatar || undefined} />
+                                <AvatarFallback className="bg-brand-100 text-brand-700">{initials}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-foreground">{safeName}</p>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm text-foreground">{admin.email}</p>
-                            <p className="text-sm text-muted-foreground">{admin.phone}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={admin.role === 'Admin' ? 'default' : 'secondary'} className={admin.role === 'Admin' ? 'bg-brand-100 text-brand-700' : ''}>{admin.role}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={admin.status === 'active' ? 'default' : 'secondary'}>{admin.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditAdmin(admin)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Admin
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleToggleActive(admin.id!, admin.status !== 'active')}>
-                                {admin.status === 'active' ? (
-                                  <EyeOff className="w-4 h-4 mr-2" />
-                                ) : (
-                                  <Eye className="w-4 h-4 mr-2" />
-                                )}
-                                {admin.status === 'active' ? 'Deactivate' : 'Activate'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setDeleteTargetId(admin.id!); setConfirmOpen(true); }} className="text-red-600 focus:text-red-600">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Admin
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="text-sm text-foreground">{admin.email}</p>
+                              <p className="text-sm text-muted-foreground">{admin.phone}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={admin.role === 'Admin' ? 'default' : 'secondary'} className={admin.role === 'Admin' ? 'bg-brand-100 text-brand-700' : ''}>{admin.role}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={admin.status === 'active' ? 'default' : 'secondary'}>{admin.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditAdmin(admin)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Admin
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleActive(admin.id!, admin.status !== 'active')}>
+                                  {admin.status === 'active' ? (
+                                    <EyeOff className="w-4 h-4 mr-2" />
+                                  ) : (
+                                    <Eye className="w-4 h-4 mr-2" />
+                                  )}
+                                  {admin.status === 'active' ? 'Deactivate' : 'Activate'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setDeleteTargetId(admin.id!); setConfirmOpen(true); }} className="text-red-600 focus:text-red-600">
+                                  <Trash2 className="w-4 h-4 mr-2 " />
+                                  Delete Admin
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </motion.tr>
+                      )
+                    })}
                   </AnimatePresence>
                 )}
               </TableBody>
@@ -775,7 +802,7 @@ export default function AdminManagement() {
             )}
             <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
-              <Button onClick={handleUpdateAdmin} className="bg-brand-600 hover:bg-brand-700"><Save className="w-4 h-4 mr-2" />Update Admin</Button>
+              <Button onClick={handleUpdateAdmin} className="bg-brand hover:bg-brand-700"><Save className="w-4 h-4 mr-2" />Update Admin</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -791,6 +818,7 @@ export default function AdminManagement() {
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
               <AlertDialogAction
+             className="bg-red-600 hover:bg-red-700"
                 disabled={deleting}
                 onClick={async () => {
                   if (!deleteTargetId) return
@@ -1022,7 +1050,6 @@ function AdminForm({
               type={showPassword ? "text" : "password"}
               placeholder="System will generate a secure password"
               value={tempPassword || "auto-generated"}
-              readOnly
               className="pr-24"
             />
 

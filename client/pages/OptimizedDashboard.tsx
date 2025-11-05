@@ -36,7 +36,7 @@ export default function OptimizedDashboard() {
       change: "+20.1%",
       changeType: "positive",
       icon: Route,
-      color: "from-brand-500 to-brand-600",
+      color: "from-green-500 to-emerald-600",
       description: "Total navigation routes"
     },
     {
@@ -54,7 +54,7 @@ export default function OptimizedDashboard() {
       change: "+19%",
       changeType: "positive",
       icon: MapPin,
-      color: "from-blue-500 to-indigo-600",
+      color: "from-green-500 to-emerald-600",
       description: "Map coordinates"
     },
     {
@@ -63,7 +63,7 @@ export default function OptimizedDashboard() {
       change: "+201",
       changeType: "positive",
       icon: FileText,
-      color: "from-orange-500 to-red-600",
+      color: "from-green-500 to-emerald-600",
       description: "This month"
     },
   ]
@@ -74,7 +74,7 @@ export default function OptimizedDashboard() {
       time: "2 minutes ago", 
       status: "success", 
       icon: Route, 
-      color: "from-brand-500 to-brand-600",
+      color: "from-green-500 to-emerald-600",
       user: "System Auto-Optimizer"
     },
     { 
@@ -82,7 +82,7 @@ export default function OptimizedDashboard() {
       time: "5 minutes ago", 
       status: "info", 
       icon: Navigation, 
-      color: "from-blue-500 to-indigo-600",
+      color: "from-green-500 to-emerald-600",
       user: "John Doe"
     },
     { 
@@ -98,7 +98,7 @@ export default function OptimizedDashboard() {
       time: "1 hour ago", 
       status: "warning", 
       icon: Settings, 
-      color: "from-orange-500 to-red-600",
+      color: "from-green-500 to-emerald-600",
       user: "Admin Team"
     },
     { 
@@ -106,7 +106,7 @@ export default function OptimizedDashboard() {
       time: "2 hours ago", 
       status: "success", 
       icon: FileText, 
-      color: "from-purple-500 to-pink-600",
+      color: "from-green-500 to-emerald-600",
       user: "Analytics Engine"
     },
   ]
@@ -124,7 +124,7 @@ export default function OptimizedDashboard() {
       title: "Route Analytics", 
       description: "View route performance data",
       icon: Route, 
-      color: "from-brand-500 to-brand-600",
+      color: "from-green-500 to-emerald-600",
       path: "/dashboard/analytics",
       count: "45,231 routes"
     },
@@ -132,7 +132,7 @@ export default function OptimizedDashboard() {
       title: "System Settings", 
       description: "Configure system parameters",
       icon: Settings, 
-      color: "from-orange-500 to-red-600",
+      color: "from-green-500 to-emerald-600",
       path: "/dashboard/settings",
       count: "12 modules"
     },
@@ -140,7 +140,7 @@ export default function OptimizedDashboard() {
       title: "Security Center", 
       description: "Manage roles & permissions",
       icon: Shield, 
-      color: "from-purple-500 to-pink-600",
+      color: "from-green-500 to-emerald-600",
       path: "/dashboard/roles",
       count: "4 roles"
     },
@@ -181,7 +181,7 @@ export default function OptimizedDashboard() {
               <Bell className="w-3.5 h-3.5 mr-1.5" />
               3
             </Button>
-            <EnhancedButton size="sm" className="h-8 text-sm">
+            <EnhancedButton size="sm" className="h-8 text-sm bg-from-green-500 to-emerald-600">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add Route
             </EnhancedButton>
@@ -256,7 +256,7 @@ export default function OptimizedDashboard() {
               <CardContent>
                 <div className="h-48 lg:h-64 flex items-center justify-center border-2 border-dashed border-border rounded-lg bg-muted/20">
                   <div className="text-center">
-                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-lg">
                       <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
                     </div>
                     <p className="text-foreground font-medium text-sm lg:text-base mb-1">

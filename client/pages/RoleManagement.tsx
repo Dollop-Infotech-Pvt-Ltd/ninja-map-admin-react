@@ -1,12 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  Shield, 
-  Users, 
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Shield,
+  Users,
   Check,
   X,
   Save,
@@ -17,7 +17,9 @@ import {
   BarChart3,
   Route,
   MapPin,
-  Activity
+  Activity,
+  Loader,
+  RefreshCw
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import api from "@/lib/http"
@@ -54,57 +56,34 @@ import { AddRoleModal } from "@/components/add-role-modal"
 import { useToast } from "@/hooks/use-toast"
 import { Link } from "react-router-dom"
 
-// Permission categories and definitions
-const permissionCategories = {
-  users: {
-    label: "User Management",
-    icon: Users,
-    permissions: [
-      { id: "users.view", label: "View Users", description: "Can view user list and profiles" },
-      { id: "users.create", label: "Create Users", description: "Can add new users to the system" },
-      { id: "users.edit", label: "Edit Users", description: "Can modify user information" },
-      { id: "users.delete", label: "Delete Users", description: "Can remove users from the system" },
-    ]
-  },
-  roles: {
-    label: "Role Management",
-    icon: Shield,
-    permissions: [
-      { id: "roles.view", label: "View Roles", description: "Can view role list and permissions" },
-      { id: "roles.create", label: "Create Roles", description: "Can create new roles" },
-      { id: "roles.edit", label: "Edit Roles", description: "Can modify role permissions" },
-      { id: "roles.delete", label: "Delete Roles", description: "Can remove roles" },
-    ]
-  },
-  analytics: {
-    label: "Analytics & Reports",
-    icon: BarChart3,
-    permissions: [
-      { id: "analytics.view", label: "View Analytics", description: "Can access analytics dashboard" },
-      { id: "analytics.export", label: "Export Reports", description: "Can export analytics data" },
-      { id: "analytics.advanced", label: "Advanced Analytics", description: "Access to detailed analytics" },
-    ]
-  },
-  navigation: {
-    label: "Navigation Management",
-    icon: Route,
-    permissions: [
-      { id: "navigation.view", label: "View Routes", description: "Can view navigation routes" },
-      { id: "navigation.create", label: "Create Routes", description: "Can create new routes" },
-      { id: "navigation.edit", label: "Edit Routes", description: "Can modify existing routes" },
-      { id: "navigation.delete", label: "Delete Routes", description: "Can remove routes" },
-    ]
-  },
-  system: {
-    label: "System Administration",
-    icon: Settings,
-    permissions: [
-      { id: "system.settings", label: "System Settings", description: "Can modify system configuration" },
-      { id: "system.logs", label: "View Logs", description: "Can access system logs" },
-      { id: "system.backup", label: "Backup Management", description: "Can manage system backups" },
-      { id: "system.maintenance", label: "Maintenance Mode", description: "Can enable maintenance mode" },
-    ]
-  }
+// Icon mapping for resource categories
+const resourceIconMap: Record<string, any> = {
+  USER_MANAGEMENT: Users,
+  ROLE_MANAGEMENT: Shield,
+  ANALYTICS_REPORTS: BarChart3,
+  NAVIGATION_MANAGEMENT: Route,
+  SYSTEM_ADMINISTRATION: Settings,
+}
+
+interface ApiPermission {
+  permissionId: string
+  resource: string
+  type: "READ" | "WRITE" | "DELETE" | "ADMIN"
+  action: string
+}
+
+interface Permission {
+  id: string
+  label: string
+  description: string
+  level: string
+  permissionId: string
+}
+
+interface PermissionCategory {
+  label: string
+  icon: any
+  permissions: Permission[]
 }
 
 // Mock roles data
@@ -114,7 +93,7 @@ const mockRoles = [
     name: "Super Admin",
     description: "Full system access with all permissions",
     userCount: 2,
-    permissions: Object.values(permissionCategories).flatMap(cat => cat.permissions.map(p => p.id)),
+    permissions: [],
     isSystem: true,
     createdAt: "2024-01-01"
   },
@@ -123,12 +102,7 @@ const mockRoles = [
     name: "Admin",
     description: "Administrative access with most permissions",
     userCount: 5,
-    permissions: [
-      "users.view", "users.create", "users.edit",
-      "roles.view", "roles.create", "roles.edit",
-      "analytics.view", "analytics.export",
-      "navigation.view", "navigation.create", "navigation.edit"
-    ],
+    permissions: [],
     isSystem: false,
     createdAt: "2024-01-05"
   },
@@ -137,11 +111,7 @@ const mockRoles = [
     name: "Manager", 
     description: "Team management with limited administrative access",
     userCount: 12,
-    permissions: [
-      "users.view", "users.edit",
-      "analytics.view",
-      "navigation.view", "navigation.create", "navigation.edit"
-    ],
+    permissions: [],
     isSystem: false,
     createdAt: "2024-01-10"
   },
@@ -150,11 +120,7 @@ const mockRoles = [
     name: "User",
     description: "Basic user access with read permissions",
     userCount: 45,
-    permissions: [
-      "users.view",
-      "analytics.view",
-      "navigation.view"
-    ],
+    permissions: [],
     isSystem: false,
     createdAt: "2024-01-15"
   }
@@ -172,10 +138,14 @@ interface Role {
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<Role[]>([])
+  const [permissionCategories, setPermissionCategories] = useState<Record<string, PermissionCategory>>({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [isCreatingRole, setIsCreatingRole] = useState(false)
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false)
   const [newRole, setNewRole] = useState<Role>({
     name: "",
     description: "",
@@ -183,11 +153,46 @@ export default function RoleManagement() {
   })
   const { toast } = useToast()
 
+  // Load permissions and roles
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        // Try backend endpoints in order of likelihood
+        setIsLoadingData(true)
+
+        // Fetch permissions from API
+        const permRes = await api.get<any>('/api/permissions/get-all?resource=all')
+        const permData = (permRes as any)?.data ?? permRes
+        const permissions: ApiPermission[] = Array.isArray(permData) ? permData : permData?.permissions ?? []
+
+        // Organize permissions by resource
+        const categories: Record<string, PermissionCategory> = {}
+        
+        permissions.forEach(perm => {
+          const resource = perm.resource
+          if (!categories[resource]) {
+            categories[resource] = {
+              label: resource.replace(/_/g, ' '),
+              icon: resourceIconMap[resource] || Shield,
+              permissions: []
+            }
+          }
+
+          const permissionLevel = perm.type.toLowerCase()
+          categories[resource].permissions.push({
+            id: `${resource.toLowerCase()}.${perm.action.toLowerCase()}`,
+            label: perm.action.replace(/_/g, ' '),
+            description: `${permissionLevel} access to ${perm.action.toLowerCase().replace(/_/g, ' ')}`,
+            level: permissionLevel,
+            permissionId: perm.permissionId
+          })
+        })
+
+        if (mounted) {
+          setPermissionCategories(categories)
+        }
+
+        // Fetch roles
         const endpoints = ['/api/roles/get-all', '/api/roles', '/api/roles/list']
         let items: any[] = []
         for (const ep of endpoints) {
@@ -197,7 +202,7 @@ export default function RoleManagement() {
             items = Array.isArray(data) ? data : data?.data ?? []
             if (Array.isArray(items) && items.length > 0) break
           } catch (err) {
-            // try next
+            // try next endpoint
           }
         }
 
@@ -206,7 +211,9 @@ export default function RoleManagement() {
             id: (r.roleId || r.id || r._id || r.role_id)?.toString?.() || undefined,
             name: r.roleName || r.name || r.role || 'Unnamed',
             description: r.description || r.desc || '',
-            permissions: r.permissions || r.rawPermissions || r.permissionsList || [],
+            permissions: Array.isArray(r.permissions) ? r.permissions.map((p: any) => 
+              typeof p === 'string' ? p : p.permissionId
+            ) : [],
             userCount: r.userCount || r.usersCount || 0,
             isSystem: !!r.isSystem,
             createdAt: r.createdAt || r.created_at || ''
@@ -215,18 +222,28 @@ export default function RoleManagement() {
           setRoles(mockRoles)
         }
       } catch (e) {
+        console.error('Failed to load permissions/roles:', e)
         setRoles(mockRoles)
+        toast({
+          title: 'Warning',
+          description: 'Using default permissions. Some data may not be up to date.',
+          variant: 'destructive'
+        })
+      } finally {
+        if (mounted) {
+          setIsLoadingData(false)
+        }
       }
     })()
     return () => { mounted = false }
-  }, [])
+  }, [toast])
 
   const filteredRoles = roles.filter(role =>
     role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     role.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleCreateRole = () => {
+  const handleCreateRole = async () => {
     if (!newRole.name || !newRole.description) {
       toast({
         title: "Validation Error",
@@ -236,22 +253,56 @@ export default function RoleManagement() {
       return
     }
 
-    const role: Role = {
-      ...newRole,
-      id: (roles.length + 1).toString(),
-      userCount: 0,
-      isSystem: false,
-      createdAt: new Date().toISOString().split('T')[0]
-    }
+    setIsCreatingRole(true)
+    try {
+      // Build permission IDs array from selected permissions
+      const permissionIds = newRole.permissions.map(permId => {
+        // Find the permission ID from the permission details
+        for (const category of Object.values(permissionCategories)) {
+          const perm = category.permissions.find(p => (p.permissionId || p.id) === permId)
+          if (perm) {
+            return perm.permissionId
+          }
+        }
+        return permId
+      })
 
-    setRoles([...roles, role])
-    setNewRole({ name: "", description: "", permissions: [] })
-    setShowCreateDialog(false)
-    
-    toast({
-      title: "Role Created",
-      description: `${role.name} role has been successfully created.`,
-    })
+      // Send API request with permission IDs only
+      const body = {
+        roleName: newRole.name,
+        description: newRole.description,
+        permissionIds: permissionIds
+      }
+
+      const response = await api.post('/api/roles/create', { body })
+      const data = (response as any)?.data ?? response
+
+      const role: Role = {
+        ...newRole,
+        id: data?.id || data?.roleId || (roles.length + 1).toString(),
+        userCount: 0,
+        isSystem: false,
+        createdAt: new Date().toISOString().split('T')[0]
+      }
+
+      setRoles([...roles, role])
+      setNewRole({ name: "", description: "", permissions: [] })
+      setShowCreateDialog(false)
+
+      toast({
+        title: "Role Created",
+        description: `${role.name} role has been successfully created.`,
+      })
+    } catch (error: any) {
+      console.error('Failed to create role:', error)
+      toast({
+        title: "Error Creating Role",
+        description: error?.message || "Failed to create role. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreatingRole(false)
+    }
   }
 
   const handleEditRole = (role: Role) => {
@@ -259,19 +310,52 @@ export default function RoleManagement() {
     setShowEditDialog(true)
   }
 
-  const handleUpdateRole = () => {
+  const handleUpdateRole = async () => {
     if (!editingRole) return
 
-    setRoles(roles.map(role => 
-      role.id === editingRole.id ? editingRole : role
-    ))
-    setShowEditDialog(false)
-    setEditingRole(null)
-    
-    toast({
-      title: "Role Updated",
-      description: `${editingRole.name} role has been successfully updated.`,
-    })
+    setIsUpdatingRole(true)
+    try {
+      // Build permission IDs array from selected permissions
+      const permissionIds = editingRole.permissions.map(permId => {
+        // Find the permission ID from the permission details
+        for (const category of Object.values(permissionCategories)) {
+          const perm = category.permissions.find(p => (p.permissionId || p.id) === permId)
+          if (perm) {
+            return perm.permissionId
+          }
+        }
+        return permId
+      })
+
+      // Send API request with permission IDs only
+      const body = {
+        roleName: editingRole.name,
+        description: editingRole.description,
+        permissionIds: permissionIds
+      }
+
+      await api.put(`/api/roles/update?roleId=${encodeURIComponent(editingRole.id || '')}`, { body })
+
+      setRoles(roles.map(role =>
+        role.id === editingRole.id ? editingRole : role
+      ))
+      setShowEditDialog(false)
+      setEditingRole(null)
+
+      toast({
+        title: "Role Updated",
+        description: `${editingRole.name} role has been successfully updated.`,
+      })
+    } catch (error: any) {
+      console.error('Failed to update role:', error)
+      toast({
+        title: "Error Updating Role",
+        description: error?.message || "Failed to update role. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingRole(false)
+    }
   }
 
   const handleDeleteRole = (roleId: string) => {
@@ -302,48 +386,13 @@ export default function RoleManagement() {
     })
   }
 
-  const handlePermissionToggle = async (permissionId: string, role: Role, setRole: (role: Role) => void) => {
-    // Toggle locally
+  const handlePermissionToggle = (permissionId: string, role: Role, setRole: (role: Role) => void) => {
     const hasPermission = role.permissions.includes(permissionId)
     const newPermissions = hasPermission
       ? role.permissions.filter(p => p !== permissionId)
       : [...role.permissions, permissionId]
 
     setRole({ ...role, permissions: newPermissions })
-
-    // Derive group and action (e.g., users.create => group=users, action=create)
-    const [group, action] = permissionId.split('.')
-    const groupKey = group ? `${group.toUpperCase()}_MANAGEMENT` : permissionId
-
-    const isCreated = newPermissions.includes(`${group}.create`)
-    const isRead = newPermissions.includes(`${group}.view`) || newPermissions.includes(`${group}.read`)
-    const isUpdate = newPermissions.includes(`${group}.edit`) || newPermissions.includes(`${group}.update`)
-    const isDelete = newPermissions.includes(`${group}.delete`)
-
-    const body = {
-      permissionId: permissionId,
-      isCreated,
-      isRead,
-      isUpdate,
-      isDelete
-    }
-
-    try {
-      await api.put('/api/permissions/update', { body })
-      toast({
-        title: 'Permission Updated',
-        description: `Updated ${permissionId} for role ${role.name}`,
-      })
-    } catch (err: any) {
-      console.error('Permission update failed', err)
-      // revert local change on failure
-      setRole(role)
-      toast({
-        title: 'Update Failed',
-        description: err?.message || 'Failed to update permission on server.',
-        variant: 'destructive'
-      })
-    }
   }
 
   const RoleForm = ({ role, setRole }: { role: Role; setRole: (role: Role) => void }) => (
@@ -377,72 +426,95 @@ export default function RoleManagement() {
           Select the permissions this role should have. Users with this role will be able to perform these actions.
         </p>
         
-        {Object.entries(permissionCategories).map(([categoryKey, category]) => {
-          const CategoryIcon = category.icon
-          const categoryPermissions = category.permissions
-          const selectedCount = categoryPermissions.filter(p => role.permissions.includes(p.id)).length
-          
-          return (
-            <Card key={categoryKey} className="border-border/50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900 rounded-lg flex items-center justify-center">
-                      <CategoryIcon className="w-4 h-4 text-brand-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{category.label}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedCount}/{categoryPermissions.length} permissions selected
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const allSelected = categoryPermissions.every(p => role.permissions.includes(p.id))
-                      const newPermissions = allSelected
-                        ? role.permissions.filter(p => !categoryPermissions.some(cp => cp.id === p))
-                        : [...new Set([...role.permissions, ...categoryPermissions.map(p => p.id)])]
-                      setRole({ ...role, permissions: newPermissions })
-                    }}
-                  >
-                    {selectedCount === categoryPermissions.length ? "Deselect All" : "Select All"}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid gap-3">
-                  {categoryPermissions.map((permission) => (
-                    <div key={permission.id} className="flex items-start space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id={permission.id}
-                        checked={role.permissions.includes(permission.id)}
-                        onCheckedChange={() => handlePermissionToggle(permission.id, role, setRole)}
-                        className="mt-0.5"
-                      />
-                      <div className="flex-1">
-                        <Label 
-                          htmlFor={permission.id} 
-                          className="text-sm font-medium cursor-pointer"
-                        >
-                          {permission.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {permission.description}
+        {Object.keys(permissionCategories).length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">No permissions available</p>
+          </div>
+        ) : (
+          Object.entries(permissionCategories).map(([categoryKey, category]) => {
+            const CategoryIcon = category.icon
+            const categoryPermissions = category.permissions
+            const selectedCount = categoryPermissions.filter(p => role.permissions.includes(p.permissionId || p.id)).length
+            
+            return (
+              <Card key={categoryKey} className="border-border/50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900 rounded-lg flex items-center justify-center">
+                        <CategoryIcon className="w-4 h-4 text-brand-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{category.label}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedCount}/{categoryPermissions.length} permissions selected
                         </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allSelected = categoryPermissions.every(p => role.permissions.includes(p.permissionId || p.id))
+                        const permissionIds = categoryPermissions.map(p => p.permissionId || p.id)
+                        const newPermissions = allSelected
+                          ? role.permissions.filter(p => !permissionIds.includes(p))
+                          : [...new Set([...role.permissions, ...permissionIds])]
+                        setRole({ ...role, permissions: newPermissions })
+                      }}
+                    >
+                      {selectedCount === categoryPermissions.length ? "Deselect All" : "Select All"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid gap-3">
+                    {categoryPermissions.map((permission) => (
+                      <div key={permission.permissionId} className="flex items-start space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
+                        <Checkbox
+                          id={permission.permissionId}
+                          checked={role.permissions.includes(permission.permissionId || permission.id)}
+                          onCheckedChange={() => handlePermissionToggle(permission.permissionId || permission.id, role, setRole)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <Label 
+                            htmlFor={permission.permissionId} 
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {permission.label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {permission.description}
+                          </p>
+                          <Badge variant="secondary" className="text-xs mt-2">
+                            {permission.level}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
       </div>
     </div>
   )
+
+  if (isLoadingData) {
+    return (
+      <OptimizedDashboardLayout title="Role Management">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <Loader className="w-8 h-8 animate-spin text-brand-500" />
+            <p className="text-muted-foreground">Loading roles and permissions...</p>
+          </div>
+        </div>
+      </OptimizedDashboardLayout>
+    )
+  }
 
   return (
     <OptimizedDashboardLayout title="Role Management">
@@ -450,19 +522,23 @@ export default function RoleManagement() {
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-foreground">Roles & Permissions</h2>
+            <div className="flex items-center space-x-3 mb-2">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Secondary</Badge>
+              <p className="text-xs text-muted-foreground font-medium">Define roles using available permissions</p>
+            </div>
+            <h2 className="text-xl lg:text-2xl font-bold text-foreground">Roles Management</h2>
             <p className="text-sm text-muted-foreground">
-              Manage roles and their permissions for access control
+              Create roles and assign permissions that were defined in Permissions Management
             </p>
           </div>
           <div className="flex items-center space-x-2">
             <Link to="/dashboard/permissions">
               <Button variant="outline" size="sm" className="h-8">
                 <Settings className="w-3.5 h-3.5 mr-1.5" />
-                Advanced Permissions
+                Manage Permissions
               </Button>
             </Link>
-            <Button onClick={() => setShowCreateDialog(true)} size="sm" className="h-8 bg-brand-600 hover:bg-brand-700">
+            <Button onClick={() => setShowCreateDialog(true)} size="sm" className="h-8 bg-brand hover:bg-brand-700">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Create Role
             </Button>
@@ -576,22 +652,39 @@ export default function RoleManagement() {
           </CardContent>
         </Card>
 
-        {/* Add Role Modal */}
-        <AddRoleModal
-          isOpen={showCreateDialog}
-          onClose={() => setShowCreateDialog(false)}
-          onRoleCreated={(role) => {
-            const newRoleWithId = {
-              ...role,
-              id: role.id || (roles.length + 1).toString(),
-              userCount: role.userCount ?? 0,
-              isSystem: role.isSystem ?? false,
-              createdAt: role.createdAt || new Date().toISOString().split('T')[0],
-              lastModified: new Date().toISOString().split('T')[0]
-            }
-            setRoles((prev) => [...prev, newRoleWithId])
-          }}
-        />
+        {/* Create Role Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Role</DialogTitle>
+              <DialogDescription>
+                Create a new role and assign permissions to it.
+              </DialogDescription>
+            </DialogHeader>
+            <RoleForm role={newRole} setRole={setNewRole} />
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => {
+                setShowCreateDialog(false)
+                setNewRole({ name: "", description: "", permissions: [] })
+              }} disabled={isCreatingRole}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateRole} disabled={isCreatingRole} className="bg-brand-600 hover:bg-brand-700">
+                {isCreatingRole ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Role
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Role Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -606,12 +699,21 @@ export default function RoleManagement() {
               <RoleForm role={editingRole} setRole={setEditingRole} />
             )}
             <div className="flex justify-end space-x-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isUpdatingRole}>
                 Cancel
               </Button>
-              <Button onClick={handleUpdateRole} className="bg-brand-600 hover:bg-brand-700">
-                <Save className="w-4 h-4 mr-2" />
-                Update Role
+              <Button onClick={handleUpdateRole} disabled={isUpdatingRole} className="bg-brand-600 hover:bg-brand-700">
+                {isUpdatingRole ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Update Role
+                  </>
+                )}
               </Button>
             </div>
           </DialogContent>

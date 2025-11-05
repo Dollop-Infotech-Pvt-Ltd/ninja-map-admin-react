@@ -15,45 +15,47 @@
     --popover: 0 0% 100%;
     --popover-foreground: 234 25% 8%;
 
-    --primary: 234 89% 58%;
+    /* Primary uses the deep green from the provided palette (#036A38 -> approx. 151 65% 30%) */
+    --primary: 151 65% 30%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 234 15% 95%;
-    --secondary-foreground: 234 25% 8%;
+    /* Secondary uses the accent yellow (#FFB81C -> approx. 41 100% 55%) */
+    --secondary: 41 100% 55%;
+    --secondary-foreground: 0 0% 0%;
 
     --muted: 234 15% 95%;
     --muted-foreground: 234 10% 45%;
 
-    --accent: 234 15% 95%;
-    --accent-foreground: 234 25% 8%;
+    --accent: 41 100% 55%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 234 12% 88%;
-    --input: 234 12% 90%;
-    --ring: 234 89% 58%;
+    --border: 210 14% 90%;
+    --input: 210 14% 92%;
+    --ring: 151 65% 30%;
 
     --radius: 0.75rem;
 
-    /* Enhanced brand colors for stunning light theme */
-    --brand: 234 89% 74%;
+    /* Brand colors adapted from the provided palette (green) */
+    --brand: 151 65% 30%;
     --brand-foreground: 0 0% 100%;
-    --brand-50: 234 100% 99%;
-    --brand-100: 234 89% 96%;
-    --brand-200: 234 89% 92%;
-    --brand-300: 234 89% 85%;
-    --brand-400: 234 89% 80%;
-    --brand-500: 234 89% 76%;
-    --brand-600: 234 89% 74%;
-    --brand-700: 234 89% 68%;
-    --brand-800: 234 89% 60%;
-    --brand-900: 234 89% 52%;
+    --brand-50: 152 95% 98%;
+    --brand-100: 152 90% 96%;
+    --brand-200: 152 85% 92%;
+    --brand-300: 152 75% 85%;
+    --brand-400: 151 68% 60%;
+    --brand-500: 151 65% 45%;
+    --brand-600: 151 55% 35%;
+    --brand-700: 151 50% 28%;
+    --brand-800: 151 45% 22%;
+    --brand-900: 151 40% 18%;
 
-    /* Beautiful gradient colors for light theme */
-    --gradient-from: 234 89% 65%;
-    --gradient-to: 270 91% 55%;
-    --gradient-via: 250 90% 60%;
+    /* Gradient using green -> yellow from the palette */
+    --gradient-from: 151 65% 35%;
+    --gradient-to: 41 100% 55%;
+    --gradient-via: 100 80% 45%;
 
     /* Light theme specific colors with enhanced contrast */
     --light-overlay: 255 255 255 / 0.9;
@@ -62,9 +64,9 @@
     --light-border: 220 13% 87%;
     --light-shadow: 220 43% 11% / 0.1;
 
-    /* Enhanced cursor interaction colors */
-    --cursor-glow: 234 89% 58% / 0.3;
-    --cursor-trail: 234 89% 70% / 0.2;
+    /* Cursor interaction colors */
+    --cursor-glow: 151 65% 35% / 0.3;
+    --cursor-trail: 151 75% 45% / 0.2;
   }
 
   .dark {
@@ -77,47 +79,48 @@
     --popover: 224 71% 6%;
     --popover-foreground: 210 20% 98%;
 
-    --primary: 234 89% 68%;
+    /* Dark primary tuned to the palette (slightly lighter green for contrast) */
+    --primary: 151 65% 45%;
     --primary-foreground: 224 71% 4%;
 
-    --secondary: 215 28% 17%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 41 100% 55%;
+    --secondary-foreground: 224 71% 4%;
 
     --muted: 215 28% 17%;
     --muted-foreground: 217.9 10.6% 64.9%;
 
-    --accent: 215 28% 17%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 41 100% 55%;
+    --accent-foreground: 224 71% 4%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 20% 98%;
 
     --border: 215 28% 18%;
     --input: 215 28% 18%;
-    --ring: 234 89% 68%;
+    --ring: 151 65% 45%;
 
     --sidebar-background: 224 71% 4%;
     --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 234 89% 68%;
+    --sidebar-primary: 151 65% 45%;
     --sidebar-primary-foreground: 224 71% 4%;
-    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent: 41 100% 55%;
     --sidebar-accent-foreground: 210 20% 98%;
     --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 234 89% 68%;
+    --sidebar-ring: 151 65% 45%;
 
-    /* Dark theme brand colors maintaining consistency */
-    --brand: 234 89% 74%;
+    /* Dark theme brand colors derived from palette */
+    --brand: 151 65% 45%;
     --brand-foreground: 224 71% 4%;
-    --brand-50: 234 89% 8%;
-    --brand-100: 234 89% 12%;
-    --brand-200: 234 89% 18%;
-    --brand-300: 234 89% 28%;
-    --brand-400: 234 89% 55%;
-    --brand-500: 234 89% 70%;
-    --brand-600: 234 89% 74%;
-    --brand-700: 234 89% 80%;
-    --brand-800: 234 89% 85%;
-    --brand-900: 234 89% 92%;
+    --brand-50: 151 90% 12%;
+    --brand-100: 151 90% 18%;
+    --brand-200: 151 85% 28%;
+    --brand-300: 151 80% 38%;
+    --brand-400: 151 75% 50%;
+    --brand-500: 151 70% 60%;
+    --brand-600: 151 65% 70%;
+    --brand-700: 151 60% 78%;
+    --brand-800: 151 55% 85%;
+    --brand-900: 151 50% 92%;
 
     /* Dark theme specific colors with enhanced visibility */
     --light-overlay: 224 71% 4% / 0.95;
@@ -125,9 +128,9 @@
     --light-border: 215 28% 20%;
     --light-shadow: 0 0% 0% / 0.5;
 
-    /* Enhanced cursor interaction colors for dark theme */
-    --cursor-glow: 234 89% 68% / 0.4;
-    --cursor-trail: 234 89% 75% / 0.25;
+    /* Cursor interaction colors for dark theme */
+    --cursor-glow: 41 100% 55% / 0.45;
+    --cursor-trail: 151 65% 75% / 0.25;
   }
 }
 

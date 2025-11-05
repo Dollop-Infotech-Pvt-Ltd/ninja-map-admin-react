@@ -198,7 +198,7 @@ export default function VerifyOTP() {
       // Update short-lived auth token from server
       setCookie("auth_token", res.data.authToken, { days: 1 })
 
-      setTimeLeft(180)
+      setTimeLeft(60)
       setCanResend(false)
       setOtp(["", "", "", "", "", ""])
       setError("")
@@ -206,7 +206,7 @@ export default function VerifyOTP() {
 
       toast({
         title: "Code Sent!",
-        description: res?.message || "A new verification code has been sent to your email.",
+        description: `${res?.message || "A new verification code has been sent to your email."} OTP: ${res?.data?.otp}`,
       })
     } catch (error: any) {
       const serverMsg: string | undefined = error?.data?.message || error?.message
@@ -293,7 +293,7 @@ export default function VerifyOTP() {
                 <p className="text-muted-foreground mb-2">
                   We've sent a 6-digit verification code to
                 </p>
-                <p className="text-brand-600 font-medium">{email}</p>
+                <p className="text-brand font-medium">{email}</p>
               </motion.div>
             </div>
 
@@ -374,7 +374,7 @@ export default function VerifyOTP() {
                 <EnhancedButton
                   type="submit"
                   variant="default"
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white border-0"
+                  className="w-full bg-brand hover:bg-brand-700 text-white border-0"
                   disabled={!isComplete || !!error || timeLeft <= 0}
                   loading={isLoading}
                   loadingText="Verifying..."
@@ -397,7 +397,7 @@ export default function VerifyOTP() {
                 variant="ghost"
                 onClick={handleResendOTP}
                 disabled={!canResend || isLoading}
-                className="text-brand-600 hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                className="text-brand hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Resend Code

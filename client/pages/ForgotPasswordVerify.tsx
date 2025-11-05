@@ -162,7 +162,7 @@ export default function ForgotPasswordVerify() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 800))
       
-      setTimeLeft(180)
+      setTimeLeft(60)
       setCanResend(false)
       setOtp(["", "", "", "", "", ""])
       setError("")

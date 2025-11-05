@@ -113,7 +113,7 @@ export default function TermsAndConditions() {
     if (!id) { toast({ title: "Delete failed", description: "Missing T&Cs id", variant: "destructive" }); return; }
     setDeleting(true);
     try {
-      await api.delete(`/api/policies/delete/${id}`);
+      await api.delete(`/api/policies/delete?id=${id}`);
       toast({ title: "T&Cs deleted" });
       setConfirmOpen(false);
       setSelected(null);

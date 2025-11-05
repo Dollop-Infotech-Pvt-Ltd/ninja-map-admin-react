@@ -23,6 +23,7 @@ import { Eye, MoreHorizontal, Pencil, Search, Trash2, Newspaper, Plus, Upload, S
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import api from "@/lib/http";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { usePermissions } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +73,12 @@ export default function BlogManagement() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Share state gated by permissions
+  const { has } = usePermissions();
+  const canShareBlogs = has("BLOG_POST_MANAGEMENT", "SHARE_BLOGS", "WRITE");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareItem, setShareItem] = useState<BlogItem | null>(null);
 
   const handleCreateFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -256,6 +263,11 @@ export default function BlogManagement() {
     if (url) { setImageUrl(url); setImageOpen(true); }
   };
 
+  const onShare = (p: BlogItem) => {
+    setShareItem(p);
+    setShareOpen(true);
+  };
+
   return (
     <OptimizedDashboardLayout title="Blog Management">
       <div className="space-y-6">
@@ -354,6 +366,9 @@ export default function BlogManagement() {
                               <DropdownMenuItem disabled={!getCover(p)} onClick={() => onViewImage(p)}>
                                 <Eye className="w-4 h-4 mr-2" /> View Image
                               </DropdownMenuItem>
+                              <DropdownMenuItem disabled={!canShareBlogs} onClick={() => onShare(p)}>
+                                <Upload className="w-4 h-4 mr-2" /> Share
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => startEdit(p)}>
                                 <Pencil className="w-4 h-4 mr-2" /> Edit
                               </DropdownMenuItem>
@@ -390,6 +405,34 @@ export default function BlogManagement() {
           </DialogHeader>
           {imageUrl ? (
             <img src={imageUrl} alt="blog" className="w-full max-h-[70vh] object-contain rounded" />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Blog Dialog */}
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Blog</DialogTitle>
+          </DialogHeader>
+          {shareItem ? (
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm text-muted-foreground">Title</div>
+                <div className="font-medium">{shareItem.title || (shareItem as any).name || "Untitled"}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Share URL</div>
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={`${window.location.origin}/blog/${(shareItem as any).id ?? (shareItem as any).blogId ?? (shareItem as any).uuid ?? ""}`} />
+                  <Button type="button" variant="outline" onClick={() => {
+                    const url = `${window.location.origin}/blog/${(shareItem as any).id ?? (shareItem as any).blogId ?? (shareItem as any).uuid ?? ""}`;
+                    navigator.clipboard.writeText(url);
+                    toast({ title: "Link copied" });
+                  }}>Copy</Button>
+                </div>
+              </div>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

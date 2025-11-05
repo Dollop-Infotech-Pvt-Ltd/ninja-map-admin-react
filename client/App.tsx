@@ -32,45 +32,49 @@ import FAQ from "./pages/settings/Faq";
 
 const queryClient = new QueryClient();
 
+import { PermissionsProvider } from "@/lib/permissions";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light" storageKey="ninja-map-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/verify-otp" element={<VerifyOTP />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/forgot-password/verify" element={<ForgotPasswordVerify />} />
-            <Route path="/forgot-password/reset" element={<ResetPassword />} />
-            <Route path="/dashboard" element={
-              // <ProtectedRoute>
-              <OptimizedDashboard />
-              // </ProtectedRoute>
-            } />
-            <Route path="/dashboard/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            <Route path="/dashboard/admins" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
-            <Route path="/dashboard/admins/create" element={<ProtectedRoute><CreateAdmin /></ProtectedRoute>} />
-            <Route path="/dashboard/users/add" element={<ProtectedRoute><AddUser /></ProtectedRoute>} />
-            <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileUpdate /></ProtectedRoute>} />
-            <Route path="/dashboard/roles" element={<ProtectedRoute><RoleManagement /></ProtectedRoute>} />
-            <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsManagement /></ProtectedRoute>} />
-            <Route path="/dashboard/blogs" element={<ProtectedRoute><BlogManagement /></ProtectedRoute>} />
-            <Route path="/dashboard/queries" element={<ProtectedRoute><Queries /></ProtectedRoute>} />
-            <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="profile" replace />} />
-              <Route path="profile" element={<ProfileSettings />} />
-              <Route path="privacy" element={<PrivacyPolicy />} />
-              <Route path="tnc" element={<TermsAndConditions />} />
-              <Route path="faq" element={<FAQ />} />
-            </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <PermissionsProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/verify-otp" element={<VerifyOTP />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/forgot-password/verify" element={<ForgotPasswordVerify />} />
+              <Route path="/forgot-password/reset" element={<ResetPassword />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                <OptimizedDashboard />
+                 </ProtectedRoute>
+              } />
+              <Route path="/dashboard/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/admins" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/admins/create" element={<ProtectedRoute><CreateAdmin /></ProtectedRoute>} />
+              <Route path="/dashboard/users/add" element={<ProtectedRoute><AddUser /></ProtectedRoute>} />
+              <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileUpdate /></ProtectedRoute>} />
+              <Route path="/dashboard/roles" element={<ProtectedRoute><RoleManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/blogs" element={<ProtectedRoute><BlogManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/queries" element={<ProtectedRoute><Queries /></ProtectedRoute>} />
+              <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+                <Route index element={<Navigate to="profile" replace />} />
+                <Route path="profile" element={<ProfileSettings />} />
+                <Route path="privacy" element={<PrivacyPolicy />} />
+                <Route path="tnc" element={<TermsAndConditions />} />
+                <Route path="faq" element={<FAQ />} />
+              </Route>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </PermissionsProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

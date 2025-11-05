@@ -123,6 +123,19 @@ export default function PolicyFormModal({ open, onOpenChange, defaultType = "PRI
       form.append("documentimage", file);
       form.append("documentImage", file);
       form.append("file", file);
+    } else if (existingImageUrl) {
+      try {
+        const response = await fetch(existingImageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const name = (() => { try { return new URL(existingImageUrl).pathname.split("/").pop() || "document"; } catch { return "document"; } })();
+          const f = new File([blob], name, { type: blob.type || "application/octet-stream" });
+          form.append("image", f);
+          form.append("documentimage", f);
+          form.append("documentImage", f);
+          form.append("file", f);
+        }
+      } catch {}
     }
 
     setLoading(true);
@@ -135,17 +148,22 @@ export default function PolicyFormModal({ open, onOpenChange, defaultType = "PRI
           res = await api.put<any>(`/api/policies/${id}`, { body: form });
         } catch {
           try {
-            res = await api.post<any>(`/api/policies/update/${id}`, { body: form });
+            res = await api.put<any>(`/api/policies/update/${id}`, { body: form });
           } catch {
-            res = await api.post<any>(`/api/policies/update`, { body: form });
+            res = await api.put<any>(`/api/policies/update`, { body: form });
           }
         }
       }
-      toast({ title: "Policy updated", description: `${title} has been updated.` });
+      const t = (effectiveType || "").toString().toUpperCase();
+      const typeLabel = /TERMS/.test(t) ? "TnCs" : /PRIVACY/.test(t) ? "Privacy Policy" : /FAQ/.test(t) ? "FAQ" : "Policy";
+      toast({ title: `${typeLabel} updated`, description: `${title} has been updated.` });
       onUpdated?.(res as any);
       onOpenChange(false);
     } catch (e: any) {
-      toast({ title: "Update failed", description: e?.message || "Unable to update policy", variant: "destructive" });
+      const status = e?.status || e?.response?.status;
+      const data = e?.data || e?.response?.data;
+      const serverMsg = (typeof data === "string" && data) || data?.message || data?.error || (Array.isArray(data?.errors) && data.errors.map((x:any)=>x?.message||x).join("; ")) || (data && typeof data === "object" ? JSON.stringify(data) : null);
+      toast({ title: `Update failed${status ? ` (${status})` : ""}`, description: String(serverMsg || e?.message || "Unable to update policy"), variant: "destructive" });
     } finally {
       setLoading(false);
     }

@@ -78,7 +78,8 @@ const mockUsers = [
     phone: "+1 (555) 123-4567",
     role: "Admin",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    status: "active",
+    status: "Active",
+    isActive: true,
     lastLogin: "2024-01-15 14:30"
   },
   {
@@ -88,7 +89,8 @@ const mockUsers = [
     phone: "+1 (555) 987-6543",
     role: "Manager",
     avatar: "https://images.unsplash.com/photo-1494790108755-2616b332c87b?w=150&h=150&fit=crop&crop=face",
-    status: "active",
+    status: "Active",
+    isActive: true,
     lastLogin: "2024-01-15 09:15"
   },
   {
@@ -98,7 +100,8 @@ const mockUsers = [
     phone: "+1 (555) 456-7890",
     role: "User",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    status: "inactive",
+    status: "Inactive",
+    isActive: false,
     lastLogin: "2024-01-10 16:45"
   },
 ]
@@ -112,6 +115,7 @@ interface User {
   role: string
   avatar?: string
   status?: string
+  isActive?: boolean
   lastLogin?: string
 }
 
@@ -126,7 +130,9 @@ export default function UserManagement() {
     email: "",
     phone: "",
     role: "",
-    avatar: ""
+    avatar: "",
+    isActive: true,
+    status: "Active"
   })
   const [showPassword, setShowPassword] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string>("")
@@ -148,16 +154,41 @@ export default function UserManagement() {
       const data = await api.get<PaginatedResponse<BackendUser>>("/api/users/get-all", {
         query: { pageSize, pageNumber },
       })
-      const mapped = (data?.content || []).map((u) => ({
-        id: u.id,
-        name: u.fullName,
-        email: u.email,
-        phone: u.mobileNumber,
-        role: "User",
-        avatar: undefined,
-        status: "active",
-        lastLogin: "—",
-      })) as User[]
+      const mapped = (data?.content || []).map((u) => {
+        const name =
+          u.fullName ||
+          (u as any)?.full_name ||
+          `${(u as any)?.firstName || ''} ${(u as any)?.lastName || ''}`.trim() ||
+          (u as any)?.name ||
+          '—'
+
+        const avatar =
+          u.profilePicture ||
+          (u as any)?.profile_picture ||
+          (u as any)?.avatar ||
+          undefined
+
+        const isActive =
+          typeof u.isActive === "boolean"
+            ? u.isActive
+            : typeof (u as any)?.is_active === "boolean"
+              ? (u as any)?.is_active
+              : String((u as any)?.status ?? "").toLowerCase() === "active"
+
+        const statusLabel = isActive ? "Active" : "Inactive"
+
+        return {
+          id: u.id,
+          name,
+          email: u.email,
+          phone: u.mobileNumber || (u as any)?.mobile_number || (u as any)?.phone,
+          role: "User",
+          avatar,
+          status: statusLabel,
+          isActive,
+          lastLogin: "—",
+        }
+      }) as User[]
       setUsers(mapped)
       setTotalElements(data?.totalElements || mapped.length)
       setTotalPages(data?.totalPages || 1)
@@ -197,13 +228,14 @@ export default function UserManagement() {
     const user: User = {
       ...newUser,
       id: (users.length + 1).toString(),
-      status: "active",
+      status: "Active",
+      isActive: true,
       lastLogin: "Never",
       avatar: avatarPreview || `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000000)}?w=150&h=150&fit=crop&crop=face`
     }
 
     setUsers([...users, user])
-    setNewUser({ name: "", email: "", phone: "", role: "", avatar: "" })
+    setNewUser({ name: "", email: "", phone: "", role: "", avatar: "", isActive: true, status: "Active" })
     setAvatarPreview("")
     setShowCreateDialog(false)
     
@@ -235,7 +267,9 @@ export default function UserManagement() {
       form.append("lastName", lastName)
       form.append("email", editingUser.email || "")
       form.append("mobileNumber", editingUser.phone || "")
-      form.append("status", editingUser.status || "")
+      const isActiveValue = editingUser.isActive ?? ((editingUser.status || "").toLowerCase() === "active")
+      form.append("status", isActiveValue ? "active" : "inactive")
+      form.append("isActive", String(isActiveValue))
 
       // Attach file only if provided
       if (avatarFile) {
@@ -244,15 +278,22 @@ export default function UserManagement() {
 
       await api.put(`/api/users/update`, { body: form })
 
+      const updatedUser: User = {
+        ...editingUser,
+        isActive: isActiveValue,
+        status: isActiveValue ? "Active" : "Inactive",
+        avatar: avatarPreview || editingUser.avatar,
+      }
+
       setUsers(users.map(user =>
-        user.id === editingUser.id
-          ? { ...editingUser, avatar: avatarPreview || editingUser.avatar }
+        user.id === updatedUser.id
+          ? updatedUser
           : user
       ))
 
       toast({
         title: "User Updated",
-        description: `${editingUser.name} has been successfully updated.`,
+        description: `${updatedUser.name} has been successfully updated.`,
       })
 
       setShowEditDialog(false)
@@ -299,15 +340,19 @@ export default function UserManagement() {
     const prev = users.find(u => u.id === userId)
     if (!prev) return
     // optimistic update
-    setUsers(users.map(u => u.id === userId ? { ...u, status: makeActive ? 'active' : 'inactive' } : u))
+    setUsers(users.map(u =>
+      u.id === userId
+        ? { ...u, isActive: makeActive, status: makeActive ? "Active" : "Inactive" }
+        : u
+    ))
     try {
       const url = `/api/users/update-status?id=${userId}&isActive=${makeActive}`
       await api.patch(url)
-      toast({ title: 'Status Updated', description: `${prev.name} is now ${makeActive ? 'active' : 'inactive'}.` })
+      toast({ title: "Status Updated", description: `${prev.name} is now ${makeActive ? "Active" : "Inactive"}.` })
     } catch (e: any) {
       // revert
       setUsers(users.map(u => u.id === userId ? prev : u))
-      toast({ title: 'Update Failed', description: e?.message || 'Failed to update user status.', variant: 'destructive' })
+      toast({ title: "Update Failed", description: e?.message || "Failed to update user status.", variant: "destructive" })
     }
   }
 
@@ -404,9 +449,9 @@ export default function UserManagement() {
       {/* Avatar Upload */}
       <div className="flex flex-col items-center space-y-4">
         <Avatar className="w-24 h-24">
-          <AvatarImage src={avatarPreview || user.avatar} />
+          <AvatarImage src={avatarPreview || user.avatar || undefined} />
           <AvatarFallback className="bg-brand-100 text-brand-700 text-lg">
-            {user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+            {((user.name || 'User').split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2)) || 'U'}
           </AvatarFallback>
         </Avatar>
         <div>
@@ -534,7 +579,7 @@ export default function UserManagement() {
             </p>
           </div>
           <Link to="/dashboard/users/add">
-            <Button size="sm" className="h-8 bg-brand-600 hover:bg-brand-700">
+            <Button size="sm" className="h-8 bg-brand hover:bg-brand-700">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add User
             </Button>
@@ -587,72 +632,84 @@ export default function UserManagement() {
                   </TableRow>
                 ) : (
                   <AnimatePresence>
-                    {filteredUsers.map((user) => (
-                      <motion.tr
-                        key={user.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                        className="group"
-                      >
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarImage src={user.avatar} />
-                              <AvatarFallback className="bg-brand-100 text-brand-700">
-                                {user.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-foreground">{user.name}</p>
+                    {filteredUsers.map((user) => {
+                      const safeName = (user.name || '').trim() || 'User'
+                      const initials =
+                        safeName
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2) || 'U'
+                      const isActive = user.isActive ?? ((user.status || '').toLowerCase() === 'active')
+
+                      return (
+                        <motion.tr
+                          key={user.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.2 }}
+                          className="group"
+                        >
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                <AvatarImage src={user.avatar || undefined} />
+                                <AvatarFallback className="bg-brand-100 text-brand-700">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-foreground">{safeName}</p>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm text-foreground">{user.email}</p>
-                            <p className="text-sm text-muted-foreground">{user.phone}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                     
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleToggleActive(user.id!, user.status !== 'active') }>
-                                {user.status === 'active' ? (
-                                  <Slash className="w-4 h-4 mr-2" />
-                                ) : (
-                                  <Check className="w-4 h-4 mr-2" />
-                                )}
-                                {user.status === 'active' ? 'Deactivate' : 'Activate'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => { setUserToDelete(user); setShowDeleteDialog(true); }}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="text-sm text-foreground">{user.email}</p>
+                              <p className="text-sm text-muted-foreground">{user.phone}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={isActive ? "default" : "secondary"}>
+                              {isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleActive(user.id!, !isActive)}>
+                                  {isActive ? (
+                                    <Slash className="w-4 h-4 mr-2" />
+                                  ) : (
+                                    <Check className="w-4 h-4 mr-2" />
+                                  )}
+                                  {isActive ? "Deactivate" : "Activate"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => { setUserToDelete(user); setShowDeleteDialog(true); }}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </motion.tr>
+                      )
+                    })}
                   </AnimatePresence>
                 )}
               </TableBody>
@@ -721,9 +778,9 @@ export default function UserManagement() {
             )}
             <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-                Cancel
+                Cancels
               </Button>
-              <Button onClick={handleUpdateUser} className="bg-brand-600 hover:bg-brand-700">
+              <Button onClick={handleUpdateUser} className="bg-brand hover:bg-brand-700">
                 <Save className="w-4 h-4 mr-2" />
                 Update User
               </Button>
@@ -826,9 +883,9 @@ function UserForm({ user, setUser, isEdit = false, avatarPreview, onAvatarUpload
     <div className="space-y-6">
       <div className="flex flex-col items-center space-y-4">
         <Avatar className="w-24 h-24">
-          <AvatarImage src={avatarPreview || user.avatar} />
+          <AvatarImage src={avatarPreview || user.avatar || undefined} />
           <AvatarFallback className="bg-brand-100 text-brand-700 text-lg">
-            {user.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+            {((user.name || 'User').split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2)) || 'U'}
           </AvatarFallback>
         </Avatar>
         <div>

@@ -113,7 +113,7 @@ export default function PrivacyPolicy() {
     if (!id) { toast({ title: "Delete failed", description: "Missing policy id", variant: "destructive" }); return; }
     setDeleting(true);
     try {
-      await api.delete(`/api/policies/delete/${id}`);
+      await api.delete(`/api/policies/delete?id=${id}`);
       toast({ title: "Policy deleted" });
       setConfirmOpen(false);
       setSelected(null);

@@ -91,6 +91,9 @@ export interface BackendUser {
   email: string;
   fullName: string;
   mobileNumber: string;
+  profilePicture?: string;
+  avatar?: string;
+  isActive?: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -103,3 +106,24 @@ export interface PaginatedResponse<T> {
   firstPage: boolean;
   lastPage: boolean;
 }
+
+// Permissions API types
+export type PermissionType = "READ" | "WRITE" | "DELETE" | "CREATE";
+
+export interface Permission {
+  permissionId: string;
+  resource: string;
+  action: string;
+  type: PermissionType;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
+}
+
+export interface PermissionsResponse extends ApiResponse<Permission[]> {}
+
+export interface PermissionResponse extends ApiResponse<Permission> {}

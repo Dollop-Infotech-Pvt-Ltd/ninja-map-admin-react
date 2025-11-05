@@ -308,7 +308,7 @@ export default function Login() {
                   </Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-brand-600 hover:text-brand-700 transition-colors"
+                    className="text-sm text-brand hover:text-brand-700 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -356,7 +356,7 @@ export default function Login() {
                   id="remember"
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(!!checked)}
-                  className="border-border data-[state=checked]:bg-brand-600 data-[state=checked]:border-brand-600"
+                  className="border-border data-[state=checked]:bg-brand data-[state=checked]:border-brand"
                   disabled={isLoading}
                 />
                 <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
@@ -369,7 +369,7 @@ export default function Login() {
                 <EnhancedButton
                   type="submit"
                   variant="default"
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white border-0"
+                  className="w-full bg- from-green-500 to-emerald-600  text-white border-0"
                   disabled={!isFormValid}
                   loading={isLoading}
                   loadingText="Logging in..."
