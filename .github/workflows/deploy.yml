@@ -1,10 +1,9 @@
-
 name: Deploy React to Cloudways
 
 on:
   push:
     branches:
-      - main  # Update if you want a different deployment branch
+      - main
 
 jobs:
   deploy:
@@ -22,7 +21,8 @@ jobs:
     - name: ⚙️ Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '22'
+        node-version: '20'
+        cache: 'npm'
 
     - name: 📦 Install dependencies
       run: npm install --legacy-peer-deps
@@ -35,10 +35,17 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: 📁 Ensure remote directory exists
+      run: |
+        ssh -o StrictHostKeyChecking=no $SSH_USERNAME@$SSH_HOST \
+        "mkdir -p $REMOTE_PATH"
+
     - name: 🧹 Clear remote directory
       run: |
-        ssh -o StrictHostKeyChecking=no $SSH_USERNAME@$SSH_HOST "rm -rf $REMOTE_PATH/*"
+        ssh -o StrictHostKeyChecking=no $SSH_USERNAME@$SSH_HOST \
+        "rm -rf $REMOTE_PATH/*"
 
     - name: 🚀 Deploy to Cloudways
       run: |
-        scp -o StrictHostKeyChecking=no -r dist/spa/* $SSH_USERNAME@$SSH_HOST:$REMOTE_PATH/
+        scp -o StrictHostKeyChecking=no -r dist/spa/* \
+        $SSH_USERNAME@$SSH_HOST:$REMOTE_PATH/
