@@ -22,6 +22,7 @@ import ProfileUpdate from "./pages/ProfileUpdate";
 import RoleManagement from "./pages/RoleManagement";
 import PermissionsManagement from "./pages/PermissionsManagement";
 import BlogManagement from "./pages/BlogManagement";
+import CustomerStoriesAdmin from "./pages/CustomerStoriesAdmin";
 import Queries from "./pages/Queries";
 import NotFound from "./pages/NotFound";
 import SettingsLayout from "./pages/settings/SettingsLayout";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/dashboard/roles" element={<ProtectedRoute><RoleManagement /></ProtectedRoute>} />
               <Route path="/dashboard/permissions" element={<ProtectedRoute><PermissionsManagement /></ProtectedRoute>} />
               <Route path="/dashboard/blogs" element={<ProtectedRoute><BlogManagement /></ProtectedRoute>} />
+              <Route path="/dashboard/customer-stories" element={<ProtectedRoute><CustomerStoriesAdmin /></ProtectedRoute>} />
               <Route path="/dashboard/queries" element={<ProtectedRoute><Queries /></ProtectedRoute>} />
               <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
                 <Route index element={<Navigate to="profile" replace />} />

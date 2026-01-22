@@ -19,7 +19,8 @@ import {
   MapPin,
   Activity,
   Loader,
-  RefreshCw
+  RefreshCw,
+  MessageSquare
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import api from "@/lib/http"
@@ -63,6 +64,9 @@ const resourceIconMap: Record<string, any> = {
   ANALYTICS_REPORTS: BarChart3,
   NAVIGATION_MANAGEMENT: Route,
   SYSTEM_ADMINISTRATION: Settings,
+  COMMENT_MANAGEMENT: MessageSquare,
+  BLOG_POST_MANAGEMENT: FileText,
+  ADMIN_MANAGEMENT: Shield,
 }
 
 interface ApiPermission {
@@ -141,11 +145,14 @@ export default function RoleManagement() {
   const [permissionCategories, setPermissionCategories] = useState<Record<string, PermissionCategory>>({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingRole, setDeletingRole] = useState<Role | null>(null)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [isCreatingRole, setIsCreatingRole] = useState(false)
   const [isUpdatingRole, setIsUpdatingRole] = useState(false)
+  const [isDeletingRole, setIsDeletingRole] = useState(false)
   const [newRole, setNewRole] = useState<Role>({
     name: "",
     description: "",
@@ -360,7 +367,9 @@ export default function RoleManagement() {
 
   const handleDeleteRole = (roleId: string) => {
     const role = roles.find(r => r.id === roleId)
-    if (role?.isSystem) {
+    if (!role) return
+
+    if (role.isSystem) {
       toast({
         title: "Cannot Delete",
         description: "System roles cannot be deleted.",
@@ -369,7 +378,7 @@ export default function RoleManagement() {
       return
     }
 
-    if (role?.userCount && role.userCount > 0) {
+    if (role.userCount && role.userCount > 0) {
       toast({
         title: "Cannot Delete",
         description: "Cannot delete role that has assigned users.",
@@ -378,12 +387,36 @@ export default function RoleManagement() {
       return
     }
 
-    setRoles(roles.filter(r => r.id !== roleId))
-    
-    toast({
-      title: "Role Deleted",
-      description: `${role?.name} role has been successfully deleted.`,
-    })
+    // Show confirmation dialog
+    setDeletingRole(role)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteRole = async () => {
+    if (!deletingRole?.id) return
+
+    setIsDeletingRole(true)
+    try {
+      await api.delete(`/api/roles/delete?roleId=${encodeURIComponent(deletingRole.id)}`)
+
+      setRoles(roles.filter(r => r.id !== deletingRole.id))
+      setShowDeleteDialog(false)
+      setDeletingRole(null)
+
+      toast({
+        title: "Role Deleted",
+        description: `${deletingRole.name} role has been successfully deleted.`,
+      })
+    } catch (error: any) {
+      console.error('Failed to delete role:', error)
+      toast({
+        title: "Error Deleting Role",
+        description: error?.message || "Failed to delete role. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingRole(false)
+    }
   }
 
   const handlePermissionToggle = (permissionId: string, role: Role, setRole: (role: Role) => void) => {
@@ -394,114 +427,6 @@ export default function RoleManagement() {
 
     setRole({ ...role, permissions: newPermissions })
   }
-
-  const RoleForm = ({ role, setRole }: { role: Role; setRole: (role: Role) => void }) => (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="roleName">Role Name *</Label>
-          <Input
-            id="roleName"
-            placeholder="Enter role name"
-            value={role.name}
-            onChange={(e) => setRole({ ...role, name: e.target.value })}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="roleDescription">Description *</Label>
-          <Textarea
-            id="roleDescription"
-            placeholder="Describe the role and its responsibilities"
-            value={role.description}
-            onChange={(e) => setRole({ ...role, description: e.target.value })}
-            rows={3}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Permissions</h3>
-        <p className="text-sm text-muted-foreground">
-          Select the permissions this role should have. Users with this role will be able to perform these actions.
-        </p>
-        
-        {Object.keys(permissionCategories).length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-muted-foreground">No permissions available</p>
-          </div>
-        ) : (
-          Object.entries(permissionCategories).map(([categoryKey, category]) => {
-            const CategoryIcon = category.icon
-            const categoryPermissions = category.permissions
-            const selectedCount = categoryPermissions.filter(p => role.permissions.includes(p.permissionId || p.id)).length
-            
-            return (
-              <Card key={categoryKey} className="border-border/50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900 rounded-lg flex items-center justify-center">
-                        <CategoryIcon className="w-4 h-4 text-brand-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">{category.label}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedCount}/{categoryPermissions.length} permissions selected
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const allSelected = categoryPermissions.every(p => role.permissions.includes(p.permissionId || p.id))
-                        const permissionIds = categoryPermissions.map(p => p.permissionId || p.id)
-                        const newPermissions = allSelected
-                          ? role.permissions.filter(p => !permissionIds.includes(p))
-                          : [...new Set([...role.permissions, ...permissionIds])]
-                        setRole({ ...role, permissions: newPermissions })
-                      }}
-                    >
-                      {selectedCount === categoryPermissions.length ? "Deselect All" : "Select All"}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="grid gap-3">
-                    {categoryPermissions.map((permission) => (
-                      <div key={permission.permissionId} className="flex items-start space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-                        <Checkbox
-                          id={permission.permissionId}
-                          checked={role.permissions.includes(permission.permissionId || permission.id)}
-                          onCheckedChange={() => handlePermissionToggle(permission.permissionId || permission.id, role, setRole)}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1">
-                          <Label 
-                            htmlFor={permission.permissionId} 
-                            className="text-sm font-medium cursor-pointer"
-                          >
-                            {permission.label}
-                          </Label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {permission.description}
-                          </p>
-                          <Badge variant="secondary" className="text-xs mt-2">
-                            {permission.level}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
-    </div>
-  )
 
   if (isLoadingData) {
     return (
@@ -661,7 +586,12 @@ export default function RoleManagement() {
                 Create a new role and assign permissions to it.
               </DialogDescription>
             </DialogHeader>
-            <RoleForm role={newRole} setRole={setNewRole} />
+            <RoleFormContent 
+              role={newRole} 
+              setRole={setNewRole}
+              permissionCategories={permissionCategories}
+              handlePermissionToggle={handlePermissionToggle}
+            />
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button variant="outline" onClick={() => {
                 setShowCreateDialog(false)
@@ -696,7 +626,12 @@ export default function RoleManagement() {
               </DialogDescription>
             </DialogHeader>
             {editingRole && (
-              <RoleForm role={editingRole} setRole={setEditingRole} />
+              <RoleFormContent 
+                role={editingRole} 
+                setRole={setEditingRole}
+                permissionCategories={permissionCategories}
+                handlePermissionToggle={handlePermissionToggle}
+              />
             )}
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isUpdatingRole}>
@@ -718,7 +653,199 @@ export default function RoleManagement() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Role Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <Trash2 className="w-5 h-5" />
+                Delete Role
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this role? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {deletingRole && (
+              <div className="space-y-4 py-4">
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-foreground">{deletingRole.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{deletingRole.description}</p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {deletingRole.userCount || 0} users
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      {deletingRole.permissions.length} permissions
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 p-3 rounded-lg">
+                  <p className="text-sm text-red-800 dark:text-red-200">
+                    <strong>Warning:</strong> Deleting this role will remove it permanently from the system.
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false)
+                  setDeletingRole(null)
+                }} 
+                disabled={isDeletingRole}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeleteRole} 
+                disabled={isDeletingRole}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeletingRole ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Role
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </OptimizedDashboardLayout>
+  )
+}
+
+// Move RoleForm outside the component to prevent re-creation on every render
+function RoleFormContent({ 
+  role, 
+  setRole,
+  permissionCategories,
+  handlePermissionToggle
+}: { 
+  role: Role; 
+  setRole: (role: Role) => void;
+  permissionCategories: Record<string, PermissionCategory>;
+  handlePermissionToggle: (permissionId: string, role: Role, setRole: (role: Role) => void) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="roleName">Role Name *</Label>
+          <Input
+            id="roleName"
+            placeholder="Enter role name"
+            value={role.name}
+            onChange={(e) => setRole({ ...role, name: e.target.value })}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="roleDescription">Description *</Label>
+          <Textarea
+            id="roleDescription"
+            placeholder="Describe the role and its responsibilities"
+            value={role.description}
+            onChange={(e) => setRole({ ...role, description: e.target.value })}
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Permissions</h3>
+        <p className="text-sm text-muted-foreground">
+          Select the permissions this role should have. Users with this role will be able to perform these actions.
+        </p>
+        
+        {Object.keys(permissionCategories).length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">No permissions available</p>
+          </div>
+        ) : (
+          Object.entries(permissionCategories).map(([categoryKey, category]) => {
+            const CategoryIcon = category.icon
+            const categoryPermissions = category.permissions
+            const selectedCount = categoryPermissions.filter(p => role.permissions.includes(p.permissionId || p.id)).length
+            
+            return (
+              <Card key={categoryKey} className="border-border/50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900 rounded-lg flex items-center justify-center">
+                        <CategoryIcon className="w-4 h-4 text-brand-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{category.label}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedCount}/{categoryPermissions.length} permissions selected
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allSelected = categoryPermissions.every(p => role.permissions.includes(p.permissionId || p.id))
+                        const permissionIds = categoryPermissions.map(p => p.permissionId || p.id)
+                        const newPermissions = allSelected
+                          ? role.permissions.filter(p => !permissionIds.includes(p))
+                          : [...new Set([...role.permissions, ...permissionIds])]
+                        setRole({ ...role, permissions: newPermissions })
+                      }}
+                    >
+                      {selectedCount === categoryPermissions.length ? "Deselect All" : "Select All"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid gap-3">
+                    {categoryPermissions.map((permission) => (
+                      <div key={permission.permissionId} className="flex items-start space-x-3 p-3 rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
+                        <Checkbox
+                          id={permission.permissionId}
+                          checked={role.permissions.includes(permission.permissionId || permission.id)}
+                          onCheckedChange={() => handlePermissionToggle(permission.permissionId || permission.id, role, setRole)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <Label 
+                            htmlFor={permission.permissionId} 
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {permission.label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {permission.description}
+                          </p>
+                          <Badge variant="secondary" className="text-xs mt-2">
+                            {permission.level}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
+    </div>
   )
 }

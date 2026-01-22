@@ -3,12 +3,13 @@ import { OptimizedDashboardLayout } from "@/components/optimized-dashboard-layou
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import api from "@/lib/http";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Trash2, MoreHorizontal } from "lucide-react";
+import { Search, Trash2, MoreHorizontal, AlertTriangle, Mail, User, MessageSquare, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface QueryItem {
   id: string;
@@ -30,7 +31,9 @@ export default function Queries() {
   const [selected, setSelected] = useState<QueryItem | null>(null);
   const [open, setOpen] = useState(false);
   const [toDeleteId, setToDeleteId] = useState<string | null>(null);
+  const [deletingQuery, setDeletingQuery] = useState<QueryItem | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const fetchPage = async (page = pageNumber, size = pageSize) => {
@@ -77,26 +80,44 @@ export default function Queries() {
 
   const countLabel = useMemo(() => (hasKnownTotal ? total : items.length), [hasKnownTotal, total, items.length]);
 
-  const handleDelete = (id: string) => {
-    if (!id) return;
-    setToDeleteId(id);
+  const handleDelete = (query: QueryItem) => {
+    if (!query?.id) return;
+    setDeletingQuery(query);
+    setToDeleteId(query.id);
     setConfirmOpen(true);
   };
 
   const performDelete = async () => {
     const id = toDeleteId;
     if (!id) return;
+    
+    setIsDeleting(true);
     try {
-      await api.delete(`/api/contact-us/delete`, { query: { id } });
+      await api.delete(`/api/contact-us/delete?id=${encodeURIComponent(id)}`);
       setItems((prev) => prev.filter((it) => it.id !== id));
       setTotal((t) => (typeof t === 'number' ? Math.max(0, (t || 1) - 1) : t));
-      toast({ title: 'Deleted', description: 'Query has been deleted.' });
-      if (selected?.id === id) { setOpen(false); setSelected(null); }
-    } catch (e: any) {
-      toast({ title: 'Delete failed', description: e?.message || 'Unable to delete query', variant: 'destructive' });
-    } finally {
+      
       setConfirmOpen(false);
+      setDeletingQuery(null);
       setToDeleteId(null);
+      
+      toast({ 
+        title: 'Query Deleted', 
+        description: 'The query has been successfully deleted.' 
+      });
+      
+      if (selected?.id === id) { 
+        setOpen(false); 
+        setSelected(null); 
+      }
+    } catch (e: any) {
+      toast({ 
+        title: 'Delete Failed', 
+        description: e?.message || 'Unable to delete query', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -158,7 +179,7 @@ export default function Queries() {
                                 <DropdownMenuItem onClick={() => { setSelected(q); setOpen(true); }}>
                                   View
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(q.id)}>
+                                <DropdownMenuItem onClick={() => handleDelete(q)} className="text-red-600 focus:text-red-600">
                                   <Trash2 className="w-3.5 h-3.5 mr-2 inline" /> Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -201,17 +222,94 @@ export default function Queries() {
       </Dialog>
 
       {/* Delete confirmation */}
-      <Dialog open={confirmOpen} onOpenChange={(v) => { setConfirmOpen(v); if (!v) setToDeleteId(null); }}>
-        <DialogContent className="sm:max-w-sm">
+      <Dialog open={confirmOpen} onOpenChange={(v) => { 
+        if (!isDeleting) {
+          setConfirmOpen(v); 
+          if (!v) {
+            setToDeleteId(null);
+            setDeletingQuery(null);
+          }
+        }
+      }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm delete</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Query
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this query? This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div>
-            <p>Are you sure you want to delete this query? This action cannot be undone.</p>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={performDelete}>Delete</Button>
+          
+          {deletingQuery && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                <div className="flex items-start gap-2">
+                  <User className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{deletingQuery.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{deletingQuery.emailAddress}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">Subject</p>
+                    <p className="text-sm font-medium text-foreground">{deletingQuery.subject}</p>
+                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {deletingQuery.inquiryType}
+                  </Badge>
+                </div>
+                
+                <div className="text-xs text-muted-foreground pt-2 font-mono bg-background/50 p-2 rounded">
+                  ID: {deletingQuery.id}
+                </div>
+              </div>
+              
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 p-3 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  <strong>Warning:</strong> This query will be permanently deleted from the system.
+                </p>
+              </div>
             </div>
+          )}
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setConfirmOpen(false);
+                setDeletingQuery(null);
+                setToDeleteId(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={performDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Query
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

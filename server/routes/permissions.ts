@@ -7,7 +7,7 @@ interface Permission {
   permissionId: string;
   resource: string;
   action: string;
-  type: "READ" | "WRITE" | "DELETE" | "CREATE";
+  type: string; // Allow any string type for flexibility
 }
 
 /**
@@ -23,6 +23,11 @@ const permissionsDb: Map<string, Permission> = new Map([
   ["7", { permissionId: "7", resource: "ROLE_MANAGEMENT", action: "CREATE_ROLES", type: "WRITE" }],
   ["8", { permissionId: "8", resource: "BLOG_POST_MANAGEMENT", action: "VIEW_POSTS", type: "READ" }],
   ["9", { permissionId: "9", resource: "BLOG_POST_MANAGEMENT", action: "CREATE_POSTS", type: "WRITE" }],
+  // COMMENT_MANAGEMENT permissions
+  ["76d0bb9f-4c9b-421e-a933-170d91c4c926", { permissionId: "76d0bb9f-4c9b-421e-a933-170d91c4c926", resource: "COMMENT_MANAGEMENT", action: "CREATE_COMMENT", type: "WRITE" }],
+  ["2d592928-44ee-4714-973a-af2356264768", { permissionId: "2d592928-44ee-4714-973a-af2356264768", resource: "COMMENT_MANAGEMENT", action: "VIEW_COMMENT", type: "READ" }],
+  ["bc2aa9eb-98e4-4a9f-bf3a-472a1a01bf6d", { permissionId: "bc2aa9eb-98e4-4a9f-bf3a-472a1a01bf6d", resource: "COMMENT_MANAGEMENT", action: "LIKE_COMMENT", type: "WRITE" }],
+  ["45eca806-99aa-4d51-8518-feea1234630b", { permissionId: "45eca806-99aa-4d51-8518-feea1234630b", resource: "COMMENT_MANAGEMENT", action: "DELETE_COMMENT", type: "DELETE" }],
 ]);
 
 /**
@@ -122,10 +127,10 @@ export const handleUpdatePermission: RequestHandler = (req, res) => {
       });
     }
 
-    if (!type || !["READ", "WRITE", "DELETE", "CREATE"].includes(type)) {
+    if (!type || typeof type !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Missing or invalid 'type' in request body. Must be one of: READ, WRITE, DELETE, CREATE",
+        message: "Missing or invalid 'type' in request body. Must be a non-empty string (e.g., READ, WRITE, DELETE, CREATE, TEST, etc.)",
       });
     }
 
@@ -184,10 +189,10 @@ export const handleCreatePermission: RequestHandler = (req, res) => {
       });
     }
 
-    if (!type || !["READ", "WRITE", "DELETE", "CREATE"].includes(type)) {
+    if (!type || typeof type !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Missing or invalid 'type' in request body. Must be one of: READ, WRITE, DELETE, CREATE",
+        message: "Missing or invalid 'type' in request body. Must be a non-empty string (e.g., READ, WRITE, DELETE, CREATE, TEST, etc.)",
       });
     }
 

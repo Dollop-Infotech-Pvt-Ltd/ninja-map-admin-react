@@ -133,6 +133,10 @@ export default function PermissionsManagement() {
   const [editingFields, setEditingFields] = useState({ permissionId: "", resource: "", action: "", type: "READ" })
   const [updating, setUpdating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  
+  // Delete confirmation state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [permissionToDelete, setPermissionToDelete] = useState<Permission | null>(null)
 
   // Fetch permissions from server
   const fetchPermissions = async () => {
@@ -209,11 +213,15 @@ export default function PermissionsManagement() {
   })
 
   const getPermissionLevelColor = (level: string) => {
-    switch (level) {
+    const normalizedLevel = level.toLowerCase()
+    switch (normalizedLevel) {
       case 'read': return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
       case 'write': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
       case 'delete': return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
       case 'admin': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
+      case 'create': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400'
+      case 'edit': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+      case 'test': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400'
     }
   }
@@ -236,6 +244,47 @@ export default function PermissionsManagement() {
         }
       })
       setPermissionCategories(updatedCategories)
+
+      toast({
+        title: "Permission Deleted",
+        description: "Permission has been successfully deleted.",
+      })
+    } catch (error: any) {
+      console.error('Failed to delete permission:', error)
+      toast({
+        title: "Delete Failed",
+        description: error?.message || "Failed to delete permission",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const openDeleteConfirmation = (permission: Permission) => {
+    setPermissionToDelete(permission)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeletePermission = async () => {
+    if (!permissionToDelete?.permissionId) return
+
+    setDeletingId(permissionToDelete.permissionId)
+    try {
+      await api.delete(`/api/permissions/delete?permissionId=${encodeURIComponent(permissionToDelete.permissionId)}`)
+
+      // Remove from local state
+      const updatedCategories = { ...permissionCategories }
+      Object.keys(updatedCategories).forEach(key => {
+        updatedCategories[key] = {
+          ...updatedCategories[key],
+          permissions: updatedCategories[key].permissions.filter(p => p.permissionId !== permissionToDelete.permissionId)
+        }
+      })
+      setPermissionCategories(updatedCategories)
+
+      setShowDeleteDialog(false)
+      setPermissionToDelete(null)
 
       toast({
         title: "Permission Deleted",
@@ -465,7 +514,7 @@ export default function PermissionsManagement() {
                                       size="sm"
                                       className="h-6 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                                       disabled={deletingId === permission.permissionId}
-                                      onClick={() => handleDeletePermission(permission.permissionId || permission.id)}
+                                      onClick={() => openDeleteConfirmation(permission)}
                                       title="Delete permission"
                                     >
                                       {deletingId === permission.permissionId ? (
@@ -513,9 +562,21 @@ export default function PermissionsManagement() {
                   <SelectItem value="READ">READ</SelectItem>
                   <SelectItem value="WRITE">WRITE</SelectItem>
                   <SelectItem value="DELETE">DELETE</SelectItem>
+                  <SelectItem value="CREATE">CREATE</SelectItem>
                   <SelectItem value="EDIT">EDIT</SelectItem>
+                  <SelectItem value="ADMIN">ADMIN</SelectItem>
+                  <SelectItem value="TEST">TEST</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="perm-type-custom" className="text-xs text-muted-foreground">Or enter custom type</Label>
+              <Input 
+                id="perm-type-custom" 
+                placeholder="Custom type (e.g., TEST, APPROVE)" 
+                value={!["READ", "WRITE", "DELETE", "CREATE", "EDIT", "ADMIN", "TEST"].includes(newPerm.type) ? newPerm.type : ""} 
+                onChange={(e) => setNewPerm((s) => ({ ...s, type: e.target.value.toUpperCase() }))} 
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -569,9 +630,21 @@ export default function PermissionsManagement() {
                   <SelectItem value="READ">READ</SelectItem>
                   <SelectItem value="WRITE">WRITE</SelectItem>
                   <SelectItem value="DELETE">DELETE</SelectItem>
+                  <SelectItem value="CREATE">CREATE</SelectItem>
+                  <SelectItem value="EDIT">EDIT</SelectItem>
                   <SelectItem value="ADMIN">ADMIN</SelectItem>
+                  <SelectItem value="TEST">TEST</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-perm-type-custom" className="text-xs text-muted-foreground">Or enter custom type</Label>
+              <Input 
+                id="edit-perm-type-custom" 
+                placeholder="Custom type (e.g., TEST, APPROVE)" 
+                value={!["READ", "WRITE", "DELETE", "CREATE", "EDIT", "ADMIN", "TEST"].includes(editingFields.type) ? editingFields.type : ""} 
+                onChange={(e) => setEditingFields((s) => ({ ...s, type: e.target.value.toUpperCase() }))} 
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -595,6 +668,83 @@ export default function PermissionsManagement() {
                 setUpdating(false)
               }
             }}>Update</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Permission Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Permission
+            </DialogTitle>
+          </DialogHeader>
+          {permissionToDelete && (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this permission? This action cannot be undone and may affect roles that use this permission.
+              </p>
+              
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-foreground">{permissionToDelete.label}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{permissionToDelete.description}</p>
+                <div className="flex items-center gap-2 pt-2">
+                  <Badge variant="secondary" className={`text-xs ${getPermissionLevelColor(permissionToDelete.level)}`}>
+                    {permissionToDelete.level}
+                  </Badge>
+                  {permissionToDelete.critical && (
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertTriangle className="w-2.5 h-2.5 mr-1" />
+                      Critical
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground pt-2 font-mono bg-background/50 p-2 rounded">
+                  ID: {permissionToDelete.permissionId}
+                </div>
+              </div>
+              
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 p-3 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  <strong>Warning:</strong> Deleting this permission will remove it from all roles that currently have it assigned.
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false)
+                setPermissionToDelete(null)
+              }} 
+              disabled={deletingId === permissionToDelete?.permissionId}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeletePermission} 
+              disabled={deletingId === permissionToDelete?.permissionId}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingId === permissionToDelete?.permissionId ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <X className="w-4 h-4 mr-2" />
+                  Delete Permission
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

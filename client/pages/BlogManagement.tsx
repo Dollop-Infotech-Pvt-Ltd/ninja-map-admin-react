@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, MoreHorizontal, Pencil, Search, Trash2, Newspaper, Plus, Upload, Save } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Search, Trash2, Newspaper, Plus, Upload, Save, Star, Clock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import api from "@/lib/http";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,6 +27,7 @@ import { usePermissions } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BlogItem {
@@ -35,12 +36,25 @@ interface BlogItem {
   category?: string;
   imageUrl?: string;
   thumbnail?: string;
+  thumbnailUrl?: string;
   coverImage?: string;
   createdDate?: string;
   createdAt?: string;
+  postDate?: string;
   status?: string;
   content?: string;
+  previewContent?: string;
   tags?: string | string[];
+  isFeaturedArticle?: boolean;
+  readTimeMinutes?: number;
+  views?: number;
+  likes?: number;
+  author?: {
+    name?: string;
+    designation?: string;
+    profilePicture?: string;
+    bio?: string;
+  };
   [key: string]: any;
 }
 
@@ -60,15 +74,54 @@ export default function BlogManagement() {
 
   // Create state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newBlog, setNewBlog] = useState({ title: "", content: "", category: "", tags: "", featuredImage: null as File | null, featuredUrl: "" });
+  const [newBlog, setNewBlog] = useState({ 
+    title: "", 
+    previewContent: "",
+    detailedContent: "", 
+    category: "", 
+    tags: "", 
+    isFeaturedArticle: false, 
+    featuredImage: null as File | null, 
+    thumbnailImage: null as File | null,
+    featuredUrl: "",
+    thumbnailUrl: ""
+  });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
+  const createThumbnailRef = useRef<HTMLInputElement | null>(null);
 
   // Edit state
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editBlog, setEditBlog] = useState<{ id: string | null; title: string; content: string; category: string; tags: string; featuredImage: File | null; featuredUrl: string }>({ id: null, title: "", content: "", category: "", tags: "", featuredImage: null, featuredUrl: "" });
+  const [editBlog, setEditBlog] = useState<{ 
+    id: string | null; 
+    title: string; 
+    previewContent: string;
+    detailedContent: string; 
+    category: string; 
+    tags: string; 
+    isFeaturedArticle: boolean; 
+    featuredImage: File | null; 
+    thumbnailImage: File | null;
+    featuredUrl: string;
+    thumbnailUrl: string;
+  }>({ 
+    id: null, 
+    title: "", 
+    previewContent: "",
+    detailedContent: "", 
+    category: "", 
+    tags: "", 
+    isFeaturedArticle: false, 
+    featuredImage: null, 
+    thumbnailImage: null,
+    featuredUrl: "",
+    thumbnailUrl: ""
+  });
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editThumbnailPreview, setEditThumbnailPreview] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement | null>(null);
+  const editThumbnailRef = useRef<HTMLInputElement | null>(null);
   // Delete confirmation
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -93,25 +146,43 @@ export default function BlogManagement() {
     }
   };
 
+  const handleCreateThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setNewBlog((s) => ({ ...s, thumbnailImage: f }));
+    if (f) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setThumbnailPreview(ev.target?.result as string);
+      reader.readAsDataURL(f);
+      setNewBlog((s) => ({ ...s, thumbnailUrl: "" }));
+    } else {
+      setThumbnailPreview(null);
+    }
+  };
+
   const handleCreateBlog = async () => {
-    if (!newBlog.title || !newBlog.content) {
-      toast({ title: "Missing fields", description: "Please provide title and content", variant: "destructive" });
+    if (!newBlog.title || !newBlog.detailedContent) {
+      toast({ title: "Missing fields", description: "Please provide title and detailed content", variant: "destructive" });
       return;
     }
     const form = new FormData();
     form.append("title", newBlog.title);
-    form.append("content", newBlog.content);
+    form.append("previewContent", newBlog.previewContent || "");
+    form.append("detailedContent", newBlog.detailedContent);
     form.append("category", newBlog.category || "");
+    form.append("isFeaturedArticle", String(newBlog.isFeaturedArticle));
     if (newBlog.tags) form.append("tags", newBlog.tags);
     if (newBlog.featuredImage) form.append("featuredImage", newBlog.featuredImage);
     else if (newBlog.featuredUrl) form.append("featuredUrl", newBlog.featuredUrl);
+    if (newBlog.thumbnailImage) form.append("thumbnailImage", newBlog.thumbnailImage);
+    else if (newBlog.thumbnailUrl) form.append("thumbnailUrl", newBlog.thumbnailUrl);
 
     try {
       await api.post<any>("/api/blogs/post", { body: form });
       toast({ title: "Blog created", description: "Blog post created successfully." });
       setShowCreateDialog(false);
-      setNewBlog({ title: "", content: "", category: "", tags: "", featuredImage: null, featuredUrl: "" });
+      setNewBlog({ title: "", previewContent: "", detailedContent: "", category: "", tags: "", isFeaturedArticle: false, featuredImage: null, thumbnailImage: null, featuredUrl: "", thumbnailUrl: "" });
       setImagePreview(null);
+      setThumbnailPreview(null);
       fetchPage(0, pageSize);
     } catch (e: any) {
       toast({ title: "Create failed", description: e?.message || "Unable to create blog", variant: "destructive" });
@@ -122,12 +193,16 @@ export default function BlogManagement() {
   const startEdit = (p: BlogItem) => {
     const id = (p as any).id ?? (p as any).blogId ?? (p as any).uuid ?? null;
     const title = p.title || (p as any).name || "";
-    const content = (p as any).content || (p as any).body || "";
+    const previewContent = (p as any).previewContent || "";
+    const detailedContent = (p as any).detailedContent || (p as any).content || (p as any).body || "";
     const cat = p.category || (p as any).tag || (p as any).type || "";
     const tags = Array.isArray(p.tags) ? p.tags.join(", ") : (p.tags as string) || "";
-    const img = getCover(p);
-    setEditBlog({ id, title, content, category: cat, tags, featuredImage: null, featuredUrl: "" });
-    setEditImagePreview(img || null);
+    const isFeatured = (p as any).isFeaturedArticle ?? false;
+    const featuredImg = getCover(p);
+    const thumbnailImg = p.thumbnailUrl || p.thumbnail || null;
+    setEditBlog({ id, title, previewContent, detailedContent, category: cat, tags, isFeaturedArticle: isFeatured, featuredImage: null, thumbnailImage: null, featuredUrl: "", thumbnailUrl: "" });
+    setEditImagePreview(featuredImg || null);
+    setEditThumbnailPreview(thumbnailImg || null);
     setShowEditDialog(true);
   };
 
@@ -142,30 +217,46 @@ export default function BlogManagement() {
     }
   };
 
+  const handleEditThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setEditBlog((s) => ({ ...s, thumbnailImage: f }));
+    if (f) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setEditThumbnailPreview(ev.target?.result as string);
+      reader.readAsDataURL(f);
+      setEditBlog((s) => ({ ...s, thumbnailUrl: "" }));
+    }
+  };
+
   const handleUpdateBlog = async () => {
     if (!editBlog.id) {
       toast({ title: "Missing blog id", description: "Cannot update without an id", variant: "destructive" });
       return;
     }
-    if (!editBlog.title || !editBlog.content) {
-      toast({ title: "Missing fields", description: "Please provide title and content", variant: "destructive" });
+    if (!editBlog.title || !editBlog.detailedContent) {
+      toast({ title: "Missing fields", description: "Please provide title and detailed content", variant: "destructive" });
       return;
     }
 
     const form = new FormData();
     form.append("title", editBlog.title);
-    form.append("content", editBlog.content);
+    form.append("previewContent", editBlog.previewContent || "");
+    form.append("detailedContent", editBlog.detailedContent);
     form.append("category", editBlog.category || "");
+    form.append("isFeaturedArticle", String(editBlog.isFeaturedArticle));
     if (editBlog.tags) form.append("tags", editBlog.tags);
     if (editBlog.featuredImage) form.append("featuredImage", editBlog.featuredImage);
     else if (editBlog.featuredUrl) form.append("featuredUrl", editBlog.featuredUrl);
+    if (editBlog.thumbnailImage) form.append("thumbnailImage", editBlog.thumbnailImage);
+    else if (editBlog.thumbnailUrl) form.append("thumbnailUrl", editBlog.thumbnailUrl);
 
     try {
       await api.put<any>("/api/blogs/update", { query: { id: editBlog.id }, body: form });
       toast({ title: "Blog updated", description: "Changes saved successfully." });
       setShowEditDialog(false);
-      setEditBlog({ id: null, title: "", content: "", category: "", tags: "", featuredImage: null, featuredUrl: "" });
+      setEditBlog({ id: null, title: "", previewContent: "", detailedContent: "", category: "", tags: "", isFeaturedArticle: false, featuredImage: null, thumbnailImage: null, featuredUrl: "", thumbnailUrl: "" });
       setEditImagePreview(null);
+      setEditThumbnailPreview(null);
       fetchPage(pageNumber, pageSize);
     } catch (e: any) {
       toast({ title: "Update failed", description: e?.message || "Unable to update blog", variant: "destructive" });
@@ -205,8 +296,8 @@ export default function BlogManagement() {
   const totalPages = hasKnownTotal ? Math.max(1, Math.ceil((total ?? 0) / pageSize)) : null;
   const hasNext = hasKnownTotal ? pageNumber + 1 < (totalPages as number) : items.length === pageSize;
 
-  const getCover = (p: BlogItem) => p.imageUrl || p.thumbnail || p.coverImage || p.documentimage || p.documentImageUrl || null;
-  const getCreated = (p: BlogItem) => p.createdDate || p.createdAt || p.publishedAt || p.created || "";
+  const getCover = (p: BlogItem) => p.imageUrl || p.thumbnail || p.thumbnailUrl || p.coverImage || p.documentimage || p.documentImageUrl || null;
+  const getCreated = (p: BlogItem) => p.createdDate || p.createdAt || p.postDate || p.publishedAt || p.created || "";
   const getCategory = (p: BlogItem) => p.category || p.tag || p.type || "—";
 
   const fetchPage = async (page = pageNumber, size = pageSize) => {
@@ -217,17 +308,51 @@ export default function BlogManagement() {
       if (query && query.trim()) params.search = query.trim();
       const res = await api.get<any>("/api/blogs/get-all", { query: params });
       const data = res?.data ?? res;
-      const list = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.items)
-        ? (data as any).items
-        : Array.isArray((data as any)?.content)
-        ? (data as any).content
-        : Array.isArray((data as any)?.results)
-        ? (data as any).results
-        : [];
-      const t = (data?.total ?? data?.totalItems ?? data?.totalElements ?? data?.count ?? null) as number | null;
-      setTotal(typeof t === "number" ? t : null);
+      
+      // Handle nested structure with featuredArticles and latestArticles
+      let list: any[] = [];
+      if (data?.featuredArticles || data?.latestArticles) {
+        const featured = Array.isArray(data.featuredArticles) ? data.featuredArticles : [];
+        const latest = Array.isArray(data.latestArticles) ? data.latestArticles : [];
+        
+        // Mark featured articles
+        const markedFeatured = featured.map((item: any) => ({
+          ...item,
+          isFeaturedArticle: true,
+          _sourceType: 'featured'
+        }));
+        
+        // Mark latest articles (only if not already in featured)
+        const featuredIds = new Set(featured.map((item: any) => item.id));
+        const markedLatest = latest
+          .filter((item: any) => !featuredIds.has(item.id))
+          .map((item: any) => ({
+            ...item,
+            _sourceType: 'latest'
+          }));
+        
+        list = [...markedFeatured, ...markedLatest];
+        
+        // Set total from the response
+        const totalFeatured = data.totalFeatured || 0;
+        const totalLatest = data.totalLatest || 0;
+        setTotal(totalFeatured + totalLatest);
+      } else {
+        // Fallback to original parsing
+        list = Array.isArray(data)
+          ? data
+          : Array.isArray((data as any)?.items)
+          ? (data as any).items
+          : Array.isArray((data as any)?.content)
+          ? (data as any).content
+          : Array.isArray((data as any)?.results)
+          ? (data as any).results
+          : [];
+        
+        const t = (data?.total ?? data?.totalItems ?? data?.totalElements ?? data?.count ?? null) as number | null;
+        setTotal(typeof t === "number" ? t : null);
+      }
+      
       setItems(list as BlogItem[]);
     } catch {
       try {
@@ -332,6 +457,7 @@ export default function BlogManagement() {
                   <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead className="hidden md:table-cell">Category</TableHead>
+                    <TableHead className="hidden lg:table-cell">Type</TableHead>
                     <TableHead className="hidden sm:table-cell">Image</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -339,14 +465,31 @@ export default function BlogManagement() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={5}>Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6}>Loading...</TableCell></TableRow>
                   ) : items.length === 0 ? (
-                    <TableRow><TableCell colSpan={5}>No blogs found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6}>No blogs found.</TableCell></TableRow>
                   ) : (
                     items.map((p, idx) => (
                       <TableRow key={(p as any).id ?? idx}>
                         <TableCell className="font-medium flex items-center gap-2"><Newspaper className="w-4 h-4 text-brand-600" />{p.title || p.name || "Untitled"}</TableCell>
                         <TableCell className="hidden md:table-cell"><Badge variant="secondary">{getCategory(p)}</Badge></TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex flex-col gap-1">
+                            {(p as any).isFeaturedArticle || (p as any)._sourceType === 'featured' ? (
+                              <Badge variant="default" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 w-fit">
+                                <Star className="w-3 h-3 mr-1 fill-current" />
+                                Featured
+                              </Badge>
+                            ) : (p as any)._sourceType === 'latest' ? (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 w-fit">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Latest
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           {getCover(p) ? (
                             <img src={getCover(p) as string} alt={p.title || "blog"} className="w-10 h-10 object-cover rounded" />
@@ -439,116 +582,364 @@ export default function BlogManagement() {
 
       {/* Create Blog Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create Blog</DialogTitle>
+            <DialogTitle>Create Blog Post</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="blog-title">Title</Label>
-              <Input id="blog-title" value={newBlog.title} onChange={(e) => setNewBlog((s) => ({ ...s, title: e.target.value }))} placeholder="Enter title" />
+              <Label htmlFor="blog-title">Title *</Label>
+              <Input 
+                id="blog-title" 
+                value={newBlog.title} 
+                onChange={(e) => setNewBlog((s) => ({ ...s, title: e.target.value }))} 
+                placeholder="Enter blog title" 
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="blog-content">Content</Label>
-              <Textarea id="blog-content" rows={6} value={newBlog.content} onChange={(e) => setNewBlog((s) => ({ ...s, content: e.target.value }))} placeholder="Write your content" />
+              <Label htmlFor="blog-preview">Preview Content</Label>
+              <Textarea 
+                id="blog-preview" 
+                rows={3} 
+                value={newBlog.previewContent} 
+                onChange={(e) => setNewBlog((s) => ({ ...s, previewContent: e.target.value }))} 
+                placeholder="Short preview text for blog listing (optional)" 
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="blog-category">Category</Label>
-              <Input id="blog-category" value={newBlog.category} onChange={(e) => setNewBlog((s) => ({ ...s, category: e.target.value }))} placeholder="e.g., TECHNOLOGY" />
+              <Label htmlFor="blog-content">Detailed Content *</Label>
+              <Textarea 
+                id="blog-content" 
+                rows={8} 
+                value={newBlog.detailedContent} 
+                onChange={(e) => setNewBlog((s) => ({ ...s, detailedContent: e.target.value }))} 
+                placeholder="Write your full blog content here" 
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="blog-tags">Tags (comma separated)</Label>
-              <Input id="blog-tags" value={newBlog.tags} onChange={(e) => setNewBlog((s) => ({ ...s, tags: e.target.value }))} placeholder="e.g., SpringBoot, Java, Backend" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="blog-category">Category</Label>
+                <Input 
+                  id="blog-category" 
+                  value={newBlog.category} 
+                  onChange={(e) => setNewBlog((s) => ({ ...s, category: e.target.value.toUpperCase() }))} 
+                  placeholder="e.g., NAVIGATION, TECHNOLOGY" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="blog-tags">Tags (comma separated)</Label>
+                <Input 
+                  id="blog-tags" 
+                  value={newBlog.tags} 
+                  onChange={(e) => setNewBlog((s) => ({ ...s, tags: e.target.value }))} 
+                  placeholder="e.g., AI, Innovation, Technology" 
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="featured-image">Featured Image</Label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="create-featured" className="text-base font-medium">
+                  Featured Article
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Mark this blog post as a featured article
+                </p>
+              </div>
+              <Switch
+                id="create-featured"
+                checked={newBlog.isFeaturedArticle}
+                onCheckedChange={(checked) => setNewBlog((s) => ({ ...s, isFeaturedArticle: checked }))}
+              />
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/10">
+              <h4 className="font-medium text-sm">Featured Image</h4>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <Button variant="outline" type="button" onClick={() => createInputRef.current?.click()}>
                     <Upload className="w-4 h-4 mr-2" />Choose File
                   </Button>
-                  <input ref={createInputRef} id="featured-image" type="file" className="sr-only" accept="image/*,application/pdf" onChange={handleCreateFile} />
-                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">{newBlog.featuredImage?.name || "No file selected"}</div>
+                  <input 
+                    ref={createInputRef} 
+                    type="file" 
+                    className="sr-only" 
+                    accept="image/*" 
+                    onChange={handleCreateFile} 
+                  />
+                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">
+                    {newBlog.featuredImage?.name || "No file selected"}
+                  </div>
                 </div>
 
                 <div className="w-full">
-                  <Label htmlFor="featured-url" className="sr-only">Or paste image url</Label>
-                  <Input id="featured-url" placeholder="Or paste image URL" value={newBlog.featuredUrl} onChange={(e) => { setNewBlog((s) => ({ ...s, featuredUrl: e.target.value })); setImagePreview(e.target.value || null); if (e.target.value) setNewBlog((s) => ({ ...s, featuredImage: null })); }} />
+                  <Label htmlFor="featured-url" className="text-xs text-muted-foreground">Or paste image URL</Label>
+                  <Input 
+                    id="featured-url" 
+                    placeholder="https://example.com/image.jpg" 
+                    value={newBlog.featuredUrl} 
+                    onChange={(e) => { 
+                      setNewBlog((s) => ({ ...s, featuredUrl: e.target.value })); 
+                      setImagePreview(e.target.value || null); 
+                      if (e.target.value) setNewBlog((s) => ({ ...s, featuredImage: null })); 
+                    }} 
+                  />
                 </div>
-              </div>
 
-              {imagePreview ? (
-                <img src={imagePreview} alt="preview" className="rounded border max-w-[240px] max-h-[160px] object-cover mt-2" />
-              ) : null}
+                {imagePreview && (
+                  <img 
+                    src={imagePreview} 
+                    alt="featured preview" 
+                    className="rounded border max-w-full max-h-[200px] object-cover" 
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/10">
+              <h4 className="font-medium text-sm">Thumbnail Image</h4>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <Button variant="outline" type="button" onClick={() => createThumbnailRef.current?.click()}>
+                    <Upload className="w-4 h-4 mr-2" />Choose File
+                  </Button>
+                  <input 
+                    ref={createThumbnailRef} 
+                    type="file" 
+                    className="sr-only" 
+                    accept="image/*" 
+                    onChange={handleCreateThumbnail} 
+                  />
+                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">
+                    {newBlog.thumbnailImage?.name || "No file selected"}
+                  </div>
+                </div>
+
+                <div className="w-full">
+                  <Label htmlFor="thumbnail-url" className="text-xs text-muted-foreground">Or paste image URL</Label>
+                  <Input 
+                    id="thumbnail-url" 
+                    placeholder="https://example.com/thumbnail.jpg" 
+                    value={newBlog.thumbnailUrl} 
+                    onChange={(e) => { 
+                      setNewBlog((s) => ({ ...s, thumbnailUrl: e.target.value })); 
+                      setThumbnailPreview(e.target.value || null); 
+                      if (e.target.value) setNewBlog((s) => ({ ...s, thumbnailImage: null })); 
+                    }} 
+                  />
+                </div>
+
+                {thumbnailPreview && (
+                  <img 
+                    src={thumbnailPreview} 
+                    alt="thumbnail preview" 
+                    className="rounded border max-w-full max-h-[150px] object-cover" 
+                  />
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreateBlog}><Save className="w-4 h-4 mr-2" />Create</Button>
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setShowCreateDialog(false);
+              setNewBlog({ title: "", previewContent: "", detailedContent: "", category: "", tags: "", isFeaturedArticle: false, featuredImage: null, thumbnailImage: null, featuredUrl: "", thumbnailUrl: "" });
+              setImagePreview(null);
+              setThumbnailPreview(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateBlog} className="bg-brand-600 hover:bg-brand-700">
+              <Save className="w-4 h-4 mr-2" />
+              Create Blog
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Blog Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Blog</DialogTitle>
+            <DialogTitle>Edit Blog Post</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-blog-title">Title</Label>
-              <Input id="edit-blog-title" value={editBlog.title} onChange={(e) => setEditBlog((s) => ({ ...s, title: e.target.value }))} placeholder="Enter title" />
+              <Label htmlFor="edit-blog-title">Title *</Label>
+              <Input 
+                id="edit-blog-title" 
+                value={editBlog.title} 
+                onChange={(e) => setEditBlog((s) => ({ ...s, title: e.target.value }))} 
+                placeholder="Enter blog title" 
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-blog-content">Content</Label>
-              <Textarea id="edit-blog-content" rows={6} value={editBlog.content} onChange={(e) => setEditBlog((s) => ({ ...s, content: e.target.value }))} placeholder="Write your content" />
+              <Label htmlFor="edit-blog-preview">Preview Content</Label>
+              <Textarea 
+                id="edit-blog-preview" 
+                rows={3} 
+                value={editBlog.previewContent} 
+                onChange={(e) => setEditBlog((s) => ({ ...s, previewContent: e.target.value }))} 
+                placeholder="Short preview text for blog listing (optional)" 
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-blog-category">Category</Label>
-              <Input id="edit-blog-category" value={editBlog.category} onChange={(e) => setEditBlog((s) => ({ ...s, category: e.target.value }))} placeholder="e.g., TECHNOLOGY" />
+              <Label htmlFor="edit-blog-content">Detailed Content *</Label>
+              <Textarea 
+                id="edit-blog-content" 
+                rows={8} 
+                value={editBlog.detailedContent} 
+                onChange={(e) => setEditBlog((s) => ({ ...s, detailedContent: e.target.value }))} 
+                placeholder="Write your full blog content here" 
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-blog-tags">Tags (comma separated)</Label>
-              <Input id="edit-blog-tags" value={editBlog.tags} onChange={(e) => setEditBlog((s) => ({ ...s, tags: e.target.value }))} placeholder="e.g., SpringBoot, Java, Backend" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-blog-category">Category</Label>
+                <Input 
+                  id="edit-blog-category" 
+                  value={editBlog.category} 
+                  onChange={(e) => setEditBlog((s) => ({ ...s, category: e.target.value.toUpperCase() }))} 
+                  placeholder="e.g., NAVIGATION, TECHNOLOGY" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-blog-tags">Tags (comma separated)</Label>
+                <Input 
+                  id="edit-blog-tags" 
+                  value={editBlog.tags} 
+                  onChange={(e) => setEditBlog((s) => ({ ...s, tags: e.target.value }))} 
+                  placeholder="e.g., AI, Innovation, Technology" 
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-featured-image">Featured Image</Label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="edit-featured" className="text-base font-medium">
+                  Featured Article
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Mark this blog post as a featured article
+                </p>
+              </div>
+              <Switch
+                id="edit-featured"
+                checked={editBlog.isFeaturedArticle}
+                onCheckedChange={(checked) => setEditBlog((s) => ({ ...s, isFeaturedArticle: checked }))}
+              />
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/10">
+              <h4 className="font-medium text-sm">Featured Image</h4>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <Button variant="outline" type="button" onClick={() => editInputRef.current?.click()}>
                     <Upload className="w-4 h-4 mr-2" />Choose File
                   </Button>
-                  <input ref={editInputRef} id="edit-featured-image" type="file" className="sr-only" accept="image/*,application/pdf" onChange={handleEditFile} />
-                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">{editBlog.featuredImage?.name || "No file selected"}</div>
+                  <input 
+                    ref={editInputRef} 
+                    type="file" 
+                    className="sr-only" 
+                    accept="image/*" 
+                    onChange={handleEditFile} 
+                  />
+                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">
+                    {editBlog.featuredImage?.name || "No file selected"}
+                  </div>
                 </div>
 
                 <div className="w-full">
-                  <Label htmlFor="edit-featured-url" className="sr-only">Or paste image url</Label>
-                  <Input id="edit-featured-url" placeholder="Or paste image URL" value={editBlog.featuredUrl} onChange={(e) => { setEditBlog((s) => ({ ...s, featuredUrl: e.target.value })); setEditImagePreview(e.target.value || null); if (e.target.value) setEditBlog((s) => ({ ...s, featuredImage: null })); }} />
+                  <Label htmlFor="edit-featured-url" className="text-xs text-muted-foreground">Or paste image URL</Label>
+                  <Input 
+                    id="edit-featured-url" 
+                    placeholder="https://example.com/image.jpg" 
+                    value={editBlog.featuredUrl} 
+                    onChange={(e) => { 
+                      setEditBlog((s) => ({ ...s, featuredUrl: e.target.value })); 
+                      setEditImagePreview(e.target.value || null); 
+                      if (e.target.value) setEditBlog((s) => ({ ...s, featuredImage: null })); 
+                    }} 
+                  />
                 </div>
-              </div>
 
-              {editImagePreview ? (
-                <img src={editImagePreview} alt="preview" className="rounded border max-w-[240px] max-h-[160px] object-cover mt-2" />
-              ) : null}
+                {editImagePreview && (
+                  <img 
+                    src={editImagePreview} 
+                    alt="featured preview" 
+                    className="rounded border max-w-full max-h-[200px] object-cover" 
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/10">
+              <h4 className="font-medium text-sm">Thumbnail Image</h4>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <Button variant="outline" type="button" onClick={() => editThumbnailRef.current?.click()}>
+                    <Upload className="w-4 h-4 mr-2" />Choose File
+                  </Button>
+                  <input 
+                    ref={editThumbnailRef} 
+                    type="file" 
+                    className="sr-only" 
+                    accept="image/*" 
+                    onChange={handleEditThumbnail} 
+                  />
+                  <div className="text-sm text-muted-foreground truncate max-w-[260px]">
+                    {editBlog.thumbnailImage?.name || "No file selected"}
+                  </div>
+                </div>
+
+                <div className="w-full">
+                  <Label htmlFor="edit-thumbnail-url" className="text-xs text-muted-foreground">Or paste image URL</Label>
+                  <Input 
+                    id="edit-thumbnail-url" 
+                    placeholder="https://example.com/thumbnail.jpg" 
+                    value={editBlog.thumbnailUrl} 
+                    onChange={(e) => { 
+                      setEditBlog((s) => ({ ...s, thumbnailUrl: e.target.value })); 
+                      setEditThumbnailPreview(e.target.value || null); 
+                      if (e.target.value) setEditBlog((s) => ({ ...s, thumbnailImage: null })); 
+                    }} 
+                  />
+                </div>
+
+                {editThumbnailPreview && (
+                  <img 
+                    src={editThumbnailPreview} 
+                    alt="thumbnail preview" 
+                    className="rounded border max-w-full max-h-[150px] object-cover" 
+                  />
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
-            <Button onClick={handleUpdateBlog}><Save className="w-4 h-4 mr-2" />Save</Button>
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => {
+              setShowEditDialog(false);
+              setEditBlog({ id: null, title: "", previewContent: "", detailedContent: "", category: "", tags: "", isFeaturedArticle: false, featuredImage: null, thumbnailImage: null, featuredUrl: "", thumbnailUrl: "" });
+              setEditImagePreview(null);
+              setEditThumbnailPreview(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateBlog} className="bg-brand-600 hover:bg-brand-700">
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

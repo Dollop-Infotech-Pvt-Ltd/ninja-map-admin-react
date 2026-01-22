@@ -108,7 +108,7 @@ export interface PaginatedResponse<T> {
 }
 
 // Permissions API types
-export type PermissionType = "READ" | "WRITE" | "DELETE" | "CREATE";
+export type PermissionType = string; // Allow any string for flexibility (READ, WRITE, DELETE, CREATE, TEST, etc.)
 
 export interface Permission {
   permissionId: string;
@@ -127,3 +127,81 @@ export interface ApiResponse<T = any> {
 export interface PermissionsResponse extends ApiResponse<Permission[]> {}
 
 export interface PermissionResponse extends ApiResponse<Permission> {}
+
+// Roles API types
+export interface Role {
+  roleId: string;
+  roleName: string;
+  description: string;
+  permissionIds: string[];
+  userCount?: number;
+  isSystem?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RolesResponse extends ApiResponse<Role[]> {}
+
+export interface RoleResponse extends ApiResponse<Role> {}
+
+// Customer Stories API types
+export interface CustomerStoryAuthor {
+  name: string;
+  email: string;
+  designation?: string;
+  organisationName?: string;
+  profilePicture?: string;
+  bio?: string;
+}
+
+export interface CustomerStoryStats {
+  views?: number;
+  likes: number;
+  comments?: number;
+  shares?: number;
+}
+
+export interface CustomerStory {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  rating: number;
+  location: string;
+  author: CustomerStoryAuthor;
+  stats: CustomerStoryStats;
+  createdDate: string;
+  updatedDate: string;
+  isActive: boolean;
+  isApproved: boolean;
+  status?: 'PENDING' | 'APPROVED';
+}
+
+export interface CustomerStoriesResponse extends PaginatedResponse<CustomerStory> {}
+
+export interface CustomerStoryResponse extends ApiResponse<CustomerStory> {}
+
+// Admin User API types
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  email: string;
+  profilePicture?: string;
+  firstName: string;
+  lastName: string;
+  mobileNumber: string;
+  employeeId: string;
+  bio?: string;
+  isActive: boolean;
+  joiningDate: string;
+  role: string;
+  gender?: string;
+}
+
+export interface AdminUserResponse extends ApiResponse<AdminUser> {}
+
+// Change Password API types
+export interface ChangePasswordResponse extends ApiResponse {
+  success: boolean;
+  message: string;
+}
