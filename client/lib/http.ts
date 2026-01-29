@@ -3,7 +3,7 @@ import { getCookie, setCookie, deleteCookie } from "./cookies";
 
 export const API_BASE_URL: string =
   (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE_URL) ||
-  "http://192.168.1.11:8081";
+  "http://192.168.1.95:7002";
 
 const REFRESH_URL = "/api/admin/auth/refresh-token";
 

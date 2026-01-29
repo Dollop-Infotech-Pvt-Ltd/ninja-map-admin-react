@@ -22,7 +22,8 @@ import {
   HelpCircle,
   Lock,
   Clipboard,
-  UserCircle
+  UserCircle,
+  Star
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Input } from "@/components/ui/input"
@@ -58,14 +59,15 @@ const navItems: NavItem[] = [
   { label: "User Management", path: "/dashboard/users", icon: Users, badge: "12" },
   { label: "Admin Management", path: "/dashboard/admins", icon: ShieldCheck },
   { label: "Role Management", path: "/dashboard/roles", icon: Shield },
-  { label: "Analytics", path: "/dashboard/analytics", icon: BarChart3 },
-  { label: "Routes", path: "/dashboard/routes", icon: Route },
-  { label: "Navigation", path: "/dashboard/navigation", icon: Navigation },
-  { label: "Map Points", path: "/dashboard/mappoints", icon: MapPin },
+  // { label: "Analytics", path: "/dashboard/analytics", icon: BarChart3 },
+  // { label: "Routes", path: "/dashboard/routes", icon: Route },
+  // { label: "Navigation", path: "/dashboard/navigation", icon: Navigation },
+  // { label: "Map Points", path: "/dashboard/mappoints", icon: MapPin },
   { label: "Blogs", path: "/dashboard/blogs", icon: Newspaper },
+  { label: "Customer Stories", path: "/dashboard/customer-stories", icon: Star },
   { label: "Queries", path: "/dashboard/queries", icon: MessageSquare },
-  { label: "Reports", path: "/dashboard/reports", icon: FileText },
-  { label: "Activity Logs", path: "/dashboard/activity", icon: Activity },
+  // { label: "Reports", path: "/dashboard/reports", icon: FileText },
+  // { label: "Activity Logs", path: "/dashboard/activity", icon: Activity },
   {
     label: "Settings",
     path: "/dashboard/settings",
@@ -102,6 +104,21 @@ export function OptimizedDashboardLayout({ children, title }: DashboardLayoutPro
       setOpenSubmenu(null)
     }
   }, [location.pathname])
+
+  // Force re-render when profile is updated
+  const [forceRender, setForceRender] = useState(0)
+  
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setForceRender(prev => prev + 1)
+    }
+    
+    window.addEventListener('user-profile-updated', handleProfileUpdate)
+    
+    return () => {
+      window.removeEventListener('user-profile-updated', handleProfileUpdate)
+    }
+  }, [])
 
   const handleLogout = () => {
     setLogoutDialogOpen(false)
@@ -351,7 +368,11 @@ export function OptimizedDashboardLayout({ children, title }: DashboardLayoutPro
                   >
                     <div className="flex items-center space-x-2">
                       <Avatar className="w-7 h-7">
-                        <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+                        <AvatarImage 
+                          src={currentUser.avatar} 
+                          alt={currentUser.name}
+                          key={`avatar-small-${forceRender}`}
+                        />
                         <AvatarFallback className="bg-brand-100 text-brand-700 text-xs">
                           {currentUser.name?.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
@@ -377,7 +398,11 @@ export function OptimizedDashboardLayout({ children, title }: DashboardLayoutPro
                         <div className="p-3 border-b border-border">
                           <div className="flex items-center space-x-2">
                             <Avatar className="w-8 h-8">
-                              <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+                              <AvatarImage 
+                                src={currentUser.avatar} 
+                                alt={currentUser.name}
+                                key={`avatar-large-${forceRender}`}
+                              />
                               <AvatarFallback className="bg-brand-100 text-brand-700 text-xs">
                                 {currentUser.name?.split(' ').map(n => n[0]).join('')}
                               </AvatarFallback>
