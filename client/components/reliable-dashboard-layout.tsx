@@ -41,7 +41,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: Home },
-  { label: "User Management", path: "/dashboard/users", icon: Users, badge: "12" },
+  { label: "User Management", path: "/dashboard/users", icon: Users },
   { label: "Admin Management", path: "/dashboard/admins", icon: ShieldCheck },
   { label: "Role Management", path: "/dashboard/roles", icon: Shield },
   { label: "Analytics", path: "/dashboard/analytics", icon: BarChart3 },

@@ -201,14 +201,14 @@ export default function Login() {
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
                 <h2 className="text-3xl font-bold text-foreground mb-2">Welcome Back!</h2>
-                <p className="text-muted-foreground">
+                {/* <p className="text-muted-foreground">
                   Log in to your account to continue your navigation journey.
-                </p>
+                </p> */}
               </motion.div>
             </div>
 
             {/* Social Login */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.3 }}
@@ -240,10 +240,10 @@ export default function Login() {
                 </svg>
                 <span>Continue with Facebook</span>
               </EnhancedButton>
-            </motion.div>
+            </motion.div> */}
 
             {/* Divider */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.3 }}
@@ -255,7 +255,7 @@ export default function Login() {
               <div className="relative flex justify-center text-sm">
                 <span className="px-4 text-muted-foreground bg-background">OR</span>
               </div>
-            </motion.div>
+            </motion.div> */}
 
             {/* Login Form */}
             <motion.form
